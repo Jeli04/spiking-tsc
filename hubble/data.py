@@ -193,14 +193,14 @@ def load_wikipedia_passages() -> pd.DataFrame:
 # Use this instead of redefining per-script LOADERS dicts.
 BENCHMARK_LOADERS = {
     'winogrande_infill': lambda: load_winogrande_perturbations('infill'),
-    'winogrande_mcq':    lambda: load_winogrande_perturbations('mcq'),
-    'winogrande':        lambda: pd.concat([
+    'winogrande_mcq': lambda: load_winogrande_perturbations('mcq'),
+    'winogrande': lambda: pd.concat([
         load_winogrande_perturbations('infill'),
         load_winogrande_perturbations('mcq'),
     ], ignore_index=True),
-    'mmlu':      load_mmlu_perturbations,
-    'piqa':      load_piqa_perturbations,
-    'popqa':     load_popqa_perturbations,
+    'mmlu': load_mmlu_perturbations,
+    'piqa': load_piqa_perturbations,
+    'popqa': load_popqa_perturbations,
     'hellaswag': load_hellaswag_perturbations,
     'wikipedia': load_wikipedia_passages,
 }

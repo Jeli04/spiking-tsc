@@ -9,10 +9,10 @@ With --platt, loads cached raw RoBERTa scores and applies Platt scaling.
 GPU required for default (finetune) mode.
 
 Usage:
-  sbatch slurm/run_gpu.sbatch src/spiking/correctness/run_roberta.py
-  uv run python src/spiking/correctness/run_roberta.py --benchmark mmlu
-  uv run python src/spiking/correctness/run_roberta.py --benchmark mmlu --epochs 1
-  uv run python src/spiking/correctness/run_roberta.py --platt
+  uv run python spiking/correctness/run_roberta.py
+  uv run python spiking/correctness/run_roberta.py --benchmark mmlu
+  uv run python spiking/correctness/run_roberta.py --benchmark mmlu --epochs 1
+  uv run python spiking/correctness/run_roberta.py --platt
 """
 
 from __future__ import annotations

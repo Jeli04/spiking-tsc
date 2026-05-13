@@ -6,19 +6,19 @@ Two-phase workflow:
 
 Usage:
   # Score one attack/model pair across all benchmarks.
-  uv run python src/spiking/data_generation/run_mia_scores.py score --attack loss --model 0
+  uv run python spiking/data_generation/run_mia_scores.py score --attack loss --model 0
 
   # Score one benchmark.
-  uv run python src/spiking/data_generation/run_mia_scores.py score --attack loss --model 0 --benchmark wikipedia
+  uv run python spiking/data_generation/run_mia_scores.py score --attack loss --model 0 --benchmark wikipedia
 
-  # SLURM array: 5 attacks x 4 models = 20 tasks.
-  sbatch --array=0-19 slurm/run_gpu.sbatch src/spiking/data_generation/run_mia_scores.py score
+  # Score one task by compact task id: 5 attacks x 4 models = 20 tasks.
+  HUBBLE_TASK_ID=0 uv run python spiking/data_generation/run_mia_scores.py score
 
   # Combine all cached scores.
-  uv run python src/spiking/data_generation/run_mia_scores.py combine
+  uv run python spiking/data_generation/run_mia_scores.py combine
 
   # Combine one benchmark and merge into the existing table.
-  uv run python src/spiking/data_generation/run_mia_scores.py combine --benchmark wikipedia
+  uv run python spiking/data_generation/run_mia_scores.py combine --benchmark wikipedia
 """
 
 import argparse
@@ -233,9 +233,9 @@ def main():
 
     sp = sub.add_parser('score', help='Compute MIA scores (GPU)')
     sp.add_argument('--attack', choices=ATTACK_NAMES,
-                    help='Attack to run. Inferred from SLURM_ARRAY_TASK_ID if omitted.')
+                    help='Attack to run. Inferred from HUBBLE_TASK_ID if omitted.')
     sp.add_argument('--model', type=int, choices=range(len(PERTURBED_MODELS)),
-                    help='Perturbed model index (0-3). Inferred from SLURM_ARRAY_TASK_ID if omitted.')
+                    help='Perturbed model index (0-3). Inferred from HUBBLE_TASK_ID if omitted.')
     sp.add_argument('--benchmark', choices=BENCHMARKS, nargs='+', default=None,
                     help='Benchmark(s) to score (default: all)')
 
@@ -251,16 +251,16 @@ def main():
         attack = args.attack
         model_idx = args.model
 
-        # SLURM_ARRAY_TASK_ID maps to attack_idx * 4 + model_idx.
+        # HUBBLE_TASK_ID maps to attack_idx * 4 + model_idx.
         if attack is None or model_idx is None:
-            task_id = os.environ.get('SLURM_ARRAY_TASK_ID')
+            task_id = os.environ.get('HUBBLE_TASK_ID')
             if task_id is not None:
                 tid = int(task_id)
                 attack = ATTACK_NAMES[tid // len(PERTURBED_MODELS)]
                 model_idx = tid % len(PERTURBED_MODELS)
             else:
                 parser.error(
-                    'Provide --attack and --model, or set SLURM_ARRAY_TASK_ID')
+                    'Provide --attack and --model, or set HUBBLE_TASK_ID')
 
         phase_score(attack, model_idx, benchmarks=args.benchmark)
 

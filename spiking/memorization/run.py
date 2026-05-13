@@ -9,8 +9,8 @@ MIA scores, hidden-state features, and residual features are loaded from cache.
 No GPU needed.
 
 Usage:
-  uv run python src/spiking/memorization/run.py
-  uv run python src/spiking/memorization/run.py --benchmark popqa
+  uv run python spiking/memorization/run.py
+  uv run python spiking/memorization/run.py --benchmark popqa
 """
 
 from pathlib import Path
@@ -26,7 +26,7 @@ from hubble.simulation import ItemPool, stratified_split
 
 RESULTS_DIR = Path(__file__).parent / 'results'
 FIGURES_DIR = Path(__file__).parent / 'figures'
-PAPER_DIR = Path(__file__).resolve().parent.parent  # src/spiking/
+PAPER_DIR = Path(__file__).resolve().parent.parent  # spiking/
 DATA_RESULTS = PAPER_DIR / 'data_generation' / 'results'
 EXP50_DIR = DATA_RESULTS
 EXP11_SCORES = DATA_RESULTS / 'all_scores.parquet'
@@ -144,9 +144,9 @@ def format_auroc_table(quality_df):
         for _, row in group.iterrows():
             lines.append(
                 f'| {row["attack"]:<20s} '
-                f'| {row["auroc_low"]:.3f}    '
-                f'| {row["auroc_mid"]:.3f}       '
-                f'| {row["auroc_high"]:.3f}          '
+                f'| {row["auroc_low"]:.3f} '
+                f'| {row["auroc_mid"]:.3f} '
+                f'| {row["auroc_high"]:.3f} '
                 f'| {row["auroc_all"]:.3f} |'
             )
     return '\n'.join(lines)

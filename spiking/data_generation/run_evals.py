@@ -1,13 +1,11 @@
 """Evaluate all 8 Hubble models on all 6 benchmarks.
 
-Parallelized by model: each SLURM array task loads one model and evaluates
-it on all benchmarks, avoiding redundant model loads.
+By default this evaluates any uncached model-benchmark pairs. To evaluate a
+single Hubble model, set HUBBLE_TASK_ID to the model index.
 
 Usage:
-  sbatch --array=0-7 slurm/run_gpu.sbatch src/spiking/data_generation/run_evals.py
-
-Sequential (all uncached model-benchmark pairs):
-  uv run python src/spiking/data_generation/run_evals.py
+  uv run python spiking/data_generation/run_evals.py
+  HUBBLE_TASK_ID=6 uv run python spiking/data_generation/run_evals.py
 """
 
 import os
@@ -94,11 +92,11 @@ def evaluate_model(model_id: str):
 
 
 def main():
-    task_id = os.environ.get("SLURM_ARRAY_TASK_ID")
+    task_id = os.environ.get("HUBBLE_TASK_ID")
 
     if task_id is not None:
         model_id = HUBBLE_MODELS[int(task_id)]
-        print(f"Array task {task_id}: {_model_label(model_id)}")
+        print(f"HUBBLE_TASK_ID={task_id}: {_model_label(model_id)}")
         evaluate_model(model_id)
     else:
         for model_id in HUBBLE_MODELS:

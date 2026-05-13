@@ -31,27 +31,27 @@ BENCHMARKS_WITH_WIKIPEDIA = BENCHMARKS + ('wikipedia',)
 
 BENCHMARK_LABELS = {
     'winogrande_mcq': 'WinoGrande',
-    'mmlu':           'MMLU',
-    'piqa':           'PIQA',
-    'hellaswag':      'HellaSwag',
-    'popqa':          'PopQA',
-    'wikipedia':      'Wikipedia',
+    'mmlu': 'MMLU',
+    'piqa': 'PIQA',
+    'hellaswag': 'HellaSwag',
+    'popqa': 'PopQA',
+    'wikipedia': 'Wikipedia',
 }
 
 BENCHMARK_BASE_RATES = {
     'winogrande_mcq': 0.5,
-    'mmlu':           0.25,
-    'piqa':           0.5,
-    'hellaswag':      0.25,
-    'popqa':          0.0,
+    'mmlu': 0.25,
+    'piqa': 0.5,
+    'hellaswag': 0.25,
+    'popqa': 0.0,
 }
 
 # Raw MIA score caches still carry both WinoGrande formats.
 BENCHMARK_EXP11_MAP = {
     'winogrande_mcq': {'exp11_benchmark': 'winogrande', 'exp11_format': 'mcq'},
-    'mmlu':      {'exp11_benchmark': 'mmlu',      'exp11_format': None},
-    'piqa':      {'exp11_benchmark': 'piqa',      'exp11_format': None},
-    'popqa':     {'exp11_benchmark': 'popqa',     'exp11_format': None},
+    'mmlu': {'exp11_benchmark': 'mmlu', 'exp11_format': None},
+    'piqa': {'exp11_benchmark': 'piqa', 'exp11_format': None},
+    'popqa': {'exp11_benchmark': 'popqa', 'exp11_format': None},
     'hellaswag': {'exp11_benchmark': 'hellaswag', 'exp11_format': None},
     'wikipedia': {'exp11_benchmark': 'wikipedia', 'exp11_format': None},
 }
@@ -63,8 +63,8 @@ TEXT_WIDTH = 5.5  # COLM text width in inches
 DOSE_LABELS = {'low': 'Low dose', 'mid': 'Mid dose', 'high': 'High dose'}
 
 SAMPLE_EFF_COLORS = {
-    'naive':      '#69b9a0',
-    'ipw':        '#8a9bc8',
+    'naive': '#69b9a0',
+    'ipw': '#8a9bc8',
     'imputation': '#f3d32c',
     'clean_only': '#f4a3a3',
 }
@@ -76,12 +76,12 @@ HS_PREDICTORS = []  # optional hidden-state predictors
 MEM_PREDICTORS = ATTACKS + HS_PREDICTORS
 
 MEM_LABELS = {
-    'loss':                          'LOSS',
-    'zlib':                          'Zlib',
-    'min_k':                         'Min-K%',
-    'min_k_plus_plus':               'Min-K%++',
-    'reference':                     'Reference',
-    'final_layer_linear':            'HS mean',
+    'loss': 'LOSS',
+    'zlib': 'Zlib',
+    'min_k': 'Min-K%',
+    'min_k_plus_plus': 'Min-K%++',
+    'reference': 'Reference',
+    'final_layer_linear': 'HS mean',
     'final_layer_last_token_linear': 'HS last',
 }
 MEM_LABELS_TEX = {k: v.replace('%', r'\%') for k, v in MEM_LABELS.items()}
@@ -89,15 +89,15 @@ MEM_LABELS_TEX = {k: v.replace('%', r'\%') for k, v in MEM_LABELS.items()}
 # Correctness predictors
 
 CORR_LABELS = {
-    'platt':         'Llama Platt',
-    'llama_platt':   'Llama Platt',
-    'llm_platt':     'Llama+Platt',
-    'roberta':       'RoBERTa',
+    'platt': 'Llama Platt',
+    'llama_platt': 'Llama Platt',
+    'llm_platt': 'Llama+Platt',
+    'roberta': 'RoBERTa',
     'roberta_platt': 'RoBERTa+Platt',
-    'pythia_platt':  'Pythia+Platt',
-    'qwen_platt':    'Qwen+Platt',
-    'uncalibrated':  'Uncalib',
-    'isotonic':      'Isotonic',
+    'pythia_platt': 'Pythia+Platt',
+    'qwen_platt': 'Qwen+Platt',
+    'uncalibrated': 'Uncalib',
+    'isotonic': 'Isotonic',
 }
 
 CORR_PREDICTORS_DEFAULT = ['platt', 'roberta']

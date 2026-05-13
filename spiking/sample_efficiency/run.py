@@ -6,10 +6,10 @@ Columns = benchmarks (winogrande_mcq, mmlu, popqa by default).
 Loads pre-computed results from results/sample_efficiency_{dose}.parquet.
 
 Usage:
-  uv run python src/spiking/sample_efficiency/run.py
-  uv run python src/spiking/sample_efficiency/run.py --dose-groups high mid low
-  uv run python src/spiking/sample_efficiency/run.py --benchmarks winogrande_mcq mmlu popqa
-  uv run python src/spiking/sample_efficiency/run.py --estimators ipw combined correctness
+  uv run python spiking/sample_efficiency/run.py
+  uv run python spiking/sample_efficiency/run.py --dose-groups high mid low
+  uv run python spiking/sample_efficiency/run.py --benchmarks winogrande_mcq mmlu popqa
+  uv run python spiking/sample_efficiency/run.py --estimators ipw combined correctness
 """
 
 import argparse
@@ -59,10 +59,10 @@ Y_AXIS_CFG = {
 }
 
 ESTIMATOR_DEFS = {
-    'ipw':         ('ipw_rmse',         'o', '-',  'IPW (Min-K++)'),
-    'imputation': ('correctness_rmse', 'D', '-',  'Imputation'),
-    'clean_only':  ('clean_only_rmse',  's', '--', 'Clean-only'),
-    'naive':       ('naive_rmse',       None, ':', 'Naive (no correction)'),
+    'ipw': ('ipw_rmse', 'o', '-', 'IPW (Min-K++)'),
+    'imputation': ('correctness_rmse', 'D', '-', 'Imputation'),
+    'clean_only': ('clean_only_rmse', 's', '--', 'Clean-only'),
+    'naive': ('naive_rmse', None, ':', 'Naive (no correction)'),
 }
 
 ALL_ESTIMATORS = list(ESTIMATOR_DEFS.keys())

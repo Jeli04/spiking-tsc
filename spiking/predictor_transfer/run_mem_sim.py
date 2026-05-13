@@ -14,11 +14,11 @@ to target sim features.
 No GPU needed. Runs in minutes on CPU.
 
 Usage:
-  uv run python src/spiking/predictor_transfer/run_mem_sim.py
-  uv run python src/spiking/predictor_transfer/run_mem_sim.py --source mmlu
-  uv run python src/spiking/predictor_transfer/run_mem_sim.py --source wikipedia
-  uv run python src/spiking/predictor_transfer/run_mem_sim.py --corr-predictor roberta
-  uv run python src/spiking/predictor_transfer/run_mem_sim.py --labels perturbed
+  uv run python spiking/predictor_transfer/run_mem_sim.py
+  uv run python spiking/predictor_transfer/run_mem_sim.py --source mmlu
+  uv run python spiking/predictor_transfer/run_mem_sim.py --source wikipedia
+  uv run python spiking/predictor_transfer/run_mem_sim.py --corr-predictor roberta
+  uv run python spiking/predictor_transfer/run_mem_sim.py --labels perturbed
 """
 
 import argparse
@@ -51,7 +51,7 @@ from hubble.simulation import (
 
 RESULTS_DIR = Path(__file__).parent / 'results'
 FIGURES_DIR = Path(__file__).parent / 'figures'
-PAPER_DIR = Path(__file__).resolve().parent.parent  # src/spiking/
+PAPER_DIR = Path(__file__).resolve().parent.parent  # spiking/
 DATA_RESULTS = PAPER_DIR / 'data_generation' / 'results'
 EXP50_DIR = DATA_RESULTS
 EXP11_SCORES = DATA_RESULTS / 'all_scores.parquet'
@@ -242,8 +242,7 @@ def run_sim(pool, regime, dose_group, n, gamma, n_replicates, seed,
 
 # Output formatting
 
-def format_transfer_table(results_df, mem_predictor, regime,
-                          dose_group='high', difficulty_bin=None):
+def format_transfer_table(results_df, mem_predictor, regime, dose_group='high', difficulty_bin=None):
     """Format a source x target transfer matrix as a markdown table.
 
     Rows = source benchmark (d_hat source), Columns = target benchmark.
@@ -496,7 +495,7 @@ def main():
                             'corr_predictor': args.corr_predictor,
                             **result,
                         })
-                    print(f'    random/{dose_group}: done')
+                    print(f'  random/{dose_group}: done')
 
             has_confidence = sim_pool.confidence is not None
             if args.regime in ('correlated', 'both') and has_confidence:
@@ -517,7 +516,7 @@ def main():
                             'corr_predictor': args.corr_predictor,
                             **result,
                         })
-                    print(f'    correlated/{difficulty_bin}: done')
+                    print(f'  correlated/{difficulty_bin}: done')
 
     results_df = pd.DataFrame(all_rows)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)

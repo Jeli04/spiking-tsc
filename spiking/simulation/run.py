@@ -6,7 +6,7 @@ random and correlated contamination at fixed gamma=0.3.
 The correctness predictor is parameterized by imputation bias (not MAE), since
 bias is what matters for the imputation estimator. The key conversion is:
     bias = (1 - d) * |base_rate - p_test|
-    d    = 1 - bias / |base_rate - p_test|
+    d = 1 - bias / |base_rate - p_test|
 where d is the predictor informativeness and p_test is the expected clean accuracy
 on test sets for a given sampling regime. Since p_test differs across regimes,
 the same bias value maps to different d values per panel.
@@ -14,8 +14,8 @@ the same bias value maps to different d values per panel.
 No GPU needed.
 
 Usage:
-  uv run python src/spiking/simulation/run.py
-  uv run python src/spiking/simulation/run.py --benchmark mmlu --n-replicates 100
+  uv run python spiking/simulation/run.py
+  uv run python spiking/simulation/run.py --benchmark mmlu --n-replicates 100
 """
 
 from hubble.simulation import (
@@ -54,7 +54,7 @@ plt.rcParams.update({
 
 RESULTS_DIR = Path(__file__).parent / "results"
 FIGURES_DIR = Path(__file__).parent / "figures"
-PAPER_DIR = Path(__file__).resolve().parent.parent  # src/spiking/
+PAPER_DIR = Path(__file__).resolve().parent.parent  # spiking/
 EXP50_DIR = PAPER_DIR / "data_generation" / "results"
 
 

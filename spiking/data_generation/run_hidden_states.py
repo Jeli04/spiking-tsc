@@ -6,13 +6,13 @@ Two-phase workflow:
 
 Usage:
   # Extract features for one model across all benchmarks.
-  uv run python src/spiking/data_generation/run_hidden_states.py extract --model 0
+  uv run python spiking/data_generation/run_hidden_states.py extract --model 0
 
-  # SLURM array: 4 perturbed models.
-  sbatch --array=0-3 slurm/run_gpu.sbatch src/spiking/data_generation/run_hidden_states.py extract
+  # Extract features for one model by compact task id.
+  HUBBLE_TASK_ID=0 uv run python spiking/data_generation/run_hidden_states.py extract
 
   # Verify all caches.
-  uv run python src/spiking/data_generation/run_hidden_states.py verify
+  uv run python spiking/data_generation/run_hidden_states.py verify
 """
 
 import argparse
@@ -150,7 +150,7 @@ def main():
 
     sp = sub.add_parser('extract', help='Extract hidden-state features (GPU)')
     sp.add_argument('--model', type=int, choices=range(len(PERTURBED_MODELS)),
-                    help='Perturbed model index (0-3). Inferred from SLURM_ARRAY_TASK_ID if omitted.')
+                    help='Perturbed model index (0-3). Inferred from HUBBLE_TASK_ID if omitted.')
 
     sub.add_parser('verify', help='Verify all caches are present (CPU)')
 
@@ -159,12 +159,12 @@ def main():
     if args.command == 'extract':
         model_idx = args.model
         if model_idx is None:
-            task_id = os.environ.get('SLURM_ARRAY_TASK_ID')
+            task_id = os.environ.get('HUBBLE_TASK_ID')
             if task_id is not None:
                 model_idx = int(task_id)
             else:
                 parser.error(
-                    'Provide --model or set SLURM_ARRAY_TASK_ID')
+                    'Provide --model or set HUBBLE_TASK_ID')
         phase_extract(model_idx)
 
     elif args.command == 'verify':

@@ -1,3 +1,25 @@
+# Python / local environments
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local configuration and OS/editor files
+.env
+.DS_Store
+
+# Experiment outputs and model/cache artifacts
 results/
 figures/
 cache/
+models/
+wandb/
+*.log
+*.parquet
+*.npz
+*.pt
+*.pth
+*.safetensors
+*.bin
+*.pkl

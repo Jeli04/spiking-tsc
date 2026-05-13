@@ -7,8 +7,8 @@ draws overlapping bars for:
   - Ground-truth clean accuracy
 
 Usage:
-  uv run python src/spiking/adjustment/plot_calibration.py
-  uv run python src/spiking/adjustment/plot_calibration.py --suffix all_8b-500b_min_k_plus_plus_n500_g0.3
+  uv run python spiking/adjustment/plot_calibration.py
+  uv run python spiking/adjustment/plot_calibration.py --suffix all_8b-500b_min_k_plus_plus_n500_g0.3
 """
 
 import argparse

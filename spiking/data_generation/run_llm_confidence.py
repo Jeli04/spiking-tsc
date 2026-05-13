@@ -3,7 +3,7 @@
 Supports multiple external backends (llama / pythia / qwen). The extracted
 confidence parquet files are written to::
 
-    src/spiking/data_generation/results/confidence/{cache_key}/confidence_{label}.parquet
+    spiking/data_generation/results/confidence/{cache_key}/confidence_{label}.parquet
 
 which is where correctness/run_external_llm.py expects to find them.
 
@@ -13,22 +13,20 @@ Two-phase workflow:
 
 Usage:
   # Extract confidence for all benchmarks with the default Llama model.
-  uv run python src/spiking/data_generation/run_llm_confidence.py extract --external llama
+  uv run python spiking/data_generation/run_llm_confidence.py extract --external llama
 
   # Pythia at a specific size.
-  sbatch slurm/run_gpu.sbatch src/spiking/data_generation/run_llm_confidence.py \
-      extract --external pythia --size 1.4b
+  uv run python spiking/data_generation/run_llm_confidence.py extract --external pythia --size 1.4b
 
   # Qwen, downloaded to <project_root>/models/.
-  sbatch slurm/run_gpu.sbatch src/spiking/data_generation/run_llm_confidence.py \
-      extract --external qwen --size 8b --local-models
+  uv run python spiking/data_generation/run_llm_confidence.py extract --external qwen --size 8b --local-models
 
   # Restrict to a subset of benchmarks.
-  uv run python src/spiking/data_generation/run_llm_confidence.py \
+  uv run python spiking/data_generation/run_llm_confidence.py \
       extract --external pythia --size 1.4b --benchmark mmlu piqa
 
   # Verify all caches for a backend.
-  uv run python src/spiking/data_generation/run_llm_confidence.py verify --external llama
+  uv run python spiking/data_generation/run_llm_confidence.py verify --external llama
 """
 
 import argparse

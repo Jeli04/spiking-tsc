@@ -5,22 +5,22 @@ transfer (run_corr_sim.py) results.
 
 Usage:
   # Memorization transfer (default): d_hat varies by source.
-  uv run python src/spiking/predictor_transfer/visualize.py
+  uv run python spiking/predictor_transfer/visualize.py
 
   # Specific memorization predictors.
-  uv run python src/spiking/predictor_transfer/visualize.py \
+  uv run python spiking/predictor_transfer/visualize.py \
       --method min_k_plus_plus loss
 
   # Correctness transfer: c_hat varies by source.
-  uv run python src/spiking/predictor_transfer/visualize.py \
+  uv run python spiking/predictor_transfer/visualize.py \
       --mode corr
 
   # Specific correctness predictors.
-  uv run python src/spiking/predictor_transfer/visualize.py \
+  uv run python spiking/predictor_transfer/visualize.py \
       --mode corr --method llama_platt roberta
 
   # Average across all settings.
-  uv run python src/spiking/predictor_transfer/visualize.py \
+  uv run python spiking/predictor_transfer/visualize.py \
       --dose-group avg
 """
 

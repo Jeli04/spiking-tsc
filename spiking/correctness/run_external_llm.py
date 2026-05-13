@@ -8,24 +8,24 @@ Fits two predictors per (benchmark, model) pair:
 External confidence comes from the shared confidence cache. Run extraction
 first::
 
-    sbatch slurm/run_gpu.sbatch src/spiking/data_generation/run_llm_confidence.py \
+    uv run python spiking/data_generation/run_llm_confidence.py \
         extract --external {llama,pythia,qwen} [--size SIZE]
 
 Fits on clean cal-split items, predicts c_hat on all sim-split items.
 
 Usage:
   # Llama-3.1-8B.
-  uv run python src/spiking/correctness/run_external_llm.py --external llama
+  uv run python spiking/correctness/run_external_llm.py --external llama
 
   # Pythia at a specific size.
-  uv run python src/spiking/correctness/run_external_llm.py --external pythia --size 1.4b
+  uv run python spiking/correctness/run_external_llm.py --external pythia --size 1.4b
 
   # Qwen.
-  uv run python src/spiking/correctness/run_external_llm.py --external qwen --size 8b
+  uv run python spiking/correctness/run_external_llm.py --external qwen --size 8b
 
   # Restrict to one benchmark or use perturbed labels.
-  uv run python src/spiking/correctness/run_external_llm.py --external llama --benchmark mmlu
-  uv run python src/spiking/correctness/run_external_llm.py --external pythia --size 1.4b --perturbed-labels
+  uv run python spiking/correctness/run_external_llm.py --external llama --benchmark mmlu
+  uv run python spiking/correctness/run_external_llm.py --external pythia --size 1.4b --perturbed-labels
 """
 
 import argparse
@@ -61,7 +61,7 @@ def _load_external_confidence(benchmark, label):
     if confidence is None:
         expected = CONFIDENCE_DIR / benchmark / f'confidence_{label}.parquet'
         print(f'  [llm_platt] Cache not found for {benchmark}: {expected}')
-        print(f'  Run: uv run python src/spiking/data_generation/run_llm_confidence.py '
+        print(f'  Run: uv run python spiking/data_generation/run_llm_confidence.py '
               f'extract --external <backend> [--size <size>]')
         return None
     return confidence

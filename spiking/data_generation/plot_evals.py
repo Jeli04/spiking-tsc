@@ -4,7 +4,7 @@ Reproduces the Hubble accuracy-by-contamination figures, generalized across
 benchmarks. Handles both MC benchmarks (acc_) and generative (exact_match_).
 
 Usage:
-  uv run python src/spiking/data_generation/plot_evals.py
+  uv run python spiking/data_generation/plot_evals.py
 """
 
 from pathlib import Path

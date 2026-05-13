@@ -29,7 +29,7 @@ class ItemPool:
     """
 
     y_observed: np.ndarray  # binary outcomes from perturbed model
-    y_clean: np.ndarray     # binary outcomes from standard model (ground truth)
+    y_clean: np.ndarray  # binary outcomes from standard model (ground truth)
     duplicates: np.ndarray  # true duplication counts per item
     confidence: np.ndarray | None = None  # standard model confidence on correct answer
     d_hat: np.ndarray | None = None  # P(contaminated | x), from a memorization predictor
@@ -77,12 +77,12 @@ class ItemPool:
         the sole source of observed–clean discrepancy.
 
         Args:
-            std_path:          Path to standard-model eval parquet.
-            prt_path:          Path to perturbed-model eval parquet.
-            acc_clean_col:     Column name for clean accuracy in std_path.
+            std_path: Path to standard-model eval parquet.
+            prt_path: Path to perturbed-model eval parquet.
+            acc_clean_col: Column name for clean accuracy in std_path.
             acc_perturbed_col: Column name for perturbed accuracy in prt_path.
-            confidence_col:    Column name for confidence in std_path.
-            duplicates_col:    Column name for duplication counts (default "duplicates").
+            confidence_col: Column name for confidence in std_path.
+            duplicates_col: Column name for duplication counts (default "duplicates").
         """
         std = pd.read_parquet(std_path)
         prt = pd.read_parquet(prt_path)
@@ -141,10 +141,10 @@ class TestSet:
     """A sampled test set with predictor predictions attached."""
 
     y_observed: np.ndarray  # (n,) binary outcomes from perturbed model
-    y_clean: np.ndarray     # (n,) binary outcomes from standard model
-    d_hat: np.ndarray       # (n,) P(contaminated | x), continuous in [0, 1]
-    c_hat: np.ndarray       # (n,) E[Y_clean | x], continuous in [0, 1]
-    indices: np.ndarray     # (n,) indices into the original ItemPool
+    y_clean: np.ndarray  # (n,) binary outcomes from standard model
+    d_hat: np.ndarray  # (n,) P(contaminated | x), continuous in [0, 1]
+    c_hat: np.ndarray  # (n,) E[Y_clean | x], continuous in [0, 1]
+    indices: np.ndarray  # (n,) indices into the original ItemPool
 
     @property
     def ground_truth(self) -> float:
@@ -389,12 +389,11 @@ DIFFICULTY_BINS = ("easy", "medium", "hard")
 class SamplerConfig:
     """Configuration for how test sets are sampled from the item pool."""
 
-    regime: str = "random"            # "random" or "correlated"
-    n: int = 500                      # test set size
-    gamma: float = 0.3                # contamination rate
-    dose_group: str = "mid"           # which duplication levels to include
-    difficulty_bin: str = "hard"      # which tercile to draw contaminated items from
-                                      #   (correlated only): "hard", "medium", or "easy"
+    regime: str = "random"  # "random" or "correlated"
+    n: int = 500  # test set size
+    gamma: float = 0.3  # contamination rate
+    dose_group: str = "mid"  # which duplication levels to include
+    difficulty_bin: str = "hard"  # contaminated-item tercile for correlated sampling
 
 
 def sample_test_set(
@@ -452,9 +451,9 @@ def sample_correlated(
 
     Bins contaminated items into terciles by confidence, then draws
     contaminated items only from the specified bin.
-      "hard":   lowest confidence tercile
+      "hard": lowest confidence tercile
       "medium": middle confidence tercile
-      "easy":   highest confidence tercile
+      "easy": highest confidence tercile
     """
     assert pool.confidence is not None, (
         'Correlated sampling requires confidence scores on the ItemPool')

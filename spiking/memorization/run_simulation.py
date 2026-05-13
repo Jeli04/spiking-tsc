@@ -10,8 +10,8 @@ Outputs one table per benchmark. Benchmarks without confidence scores
 No GPU needed. Runs in minutes on CPU.
 
 Usage:
-  uv run python src/spiking/memorization/run_simulation.py
-  uv run python src/spiking/memorization/run_simulation.py --benchmark mmlu
+  uv run python spiking/memorization/run_simulation.py
+  uv run python spiking/memorization/run_simulation.py --benchmark mmlu
 """
 
 import argparse
@@ -248,10 +248,10 @@ def main():
                     **result,
                 }
                 benchmark_rows.append(row)
-                print(f'      random / {dose_group:>4s} / {attack:<20s}  '
-                      f'naive={result["naive_rmse"]*100:.1f}pp (acc={result["naive_acc"]*100:.1f})  '
-                      f'ipw={result["ipw_rmse"]*100:.1f}pp (acc={result["ipw_acc"]*100:.1f})  '
-                      f'bal_acc={result["balanced_acc"]*100:.1f}  '
+                print(f'  random / {dose_group} / {attack}: '
+                      f'naive={result["naive_rmse"]*100:.1f}pp (acc={result["naive_acc"]*100:.1f}); '
+                      f'ipw={result["ipw_rmse"]*100:.1f}pp (acc={result["ipw_acc"]*100:.1f}); '
+                      f'bal_acc={result["balanced_acc"]*100:.1f}; '
                       f'gt={result["ground_truth_acc"]*100:.1f}')
 
         # Correlated regime: high dose across difficulty bins.
@@ -271,10 +271,10 @@ def main():
                         **result,
                     }
                     benchmark_rows.append(row)
-                    print(f'  correlated / {difficulty_bin:>6s} / {attack:<20s}  '
-                          f'naive={result["naive_rmse"]*100:.1f}pp (acc={result["naive_acc"]*100:.1f})  '
-                          f'ipw={result["ipw_rmse"]*100:.1f}pp (acc={result["ipw_acc"]*100:.1f})  '
-                          f'bal_acc={result["balanced_acc"]*100:.1f}  '
+                    print(f'  correlated / {difficulty_bin} / {attack}: '
+                          f'naive={result["naive_rmse"]*100:.1f}pp (acc={result["naive_acc"]*100:.1f}); '
+                          f'ipw={result["ipw_rmse"]*100:.1f}pp (acc={result["ipw_acc"]*100:.1f}); '
+                          f'bal_acc={result["balanced_acc"]*100:.1f}; '
                           f'gt={result["ground_truth_acc"]*100:.1f}')
 
         bm_df = pd.DataFrame(benchmark_rows)

@@ -32,7 +32,8 @@ def run_eval(
 ):
     """Run the standard Hubble evaluation loop.
 
-    Handles SLURM array dispatch, caching to parquet, and GPU cleanup.
+    Handles optional single-model dispatch through HUBBLE_TASK_ID, caching to
+    parquet, and GPU cleanup.
 
     Args:
         results_dir: Where to write eval_{label}.parquet files.
@@ -45,13 +46,13 @@ def run_eval(
     results_dir.mkdir(exist_ok=True, parents=True)
 
     df = load_data()
-    task_id = os.environ.get("SLURM_ARRAY_TASK_ID")
+    task_id = os.environ.get("HUBBLE_TASK_ID")
 
     if task_id is not None:
         idx = int(task_id)
         model_id = models[idx]
         label = _model_label(model_id)
-        print(f"Array task {idx}: evaluating {label}")
+        print(f"HUBBLE_TASK_ID={idx}: evaluating {label}")
         _evaluate_single(df, model_id, eval_fn, results_dir)
     else:
         for model_id in models:
@@ -83,5 +84,4 @@ def _evaluate_single(
 
     result_df.to_parquet(cache_path)
     print(f"Cached {label} → {cache_path}")
-
 

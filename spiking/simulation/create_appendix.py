@@ -5,7 +5,7 @@ Generates two full-page figures from saved parquet results:
   2. Correlated contamination (benchmarks x 3 difficulty bins)
 
 Usage:
-  uv run python src/spiking/simulation/create_appendix.py
+  uv run python spiking/simulation/create_appendix.py
 """
 
 from pathlib import Path

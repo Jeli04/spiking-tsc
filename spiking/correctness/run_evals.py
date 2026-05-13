@@ -6,9 +6,9 @@ needed, and reports Brier, AUROC, balanced accuracy, bias, and variance.
 No GPU needed.
 
 Usage:
-  uv run python src/spiking/correctness/run_evals.py
-  uv run python src/spiking/correctness/run_evals.py --benchmark mmlu
-  uv run python src/spiking/correctness/run_evals.py --pythia-size 6.9b
+  uv run python spiking/correctness/run_evals.py
+  uv run python spiking/correctness/run_evals.py --benchmark mmlu
+  uv run python spiking/correctness/run_evals.py --pythia-size 6.9b
 """
 
 from pathlib import Path

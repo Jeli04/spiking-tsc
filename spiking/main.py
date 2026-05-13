@@ -54,7 +54,7 @@ PLOT_SUFFIXES = {'.pdf', '.png', '.md', '.tex', '.html'}
 
 # Release runs focus on the 8B / 500B-token Hubble pair.
 RUN_EVAL_TASK_IDS = ('6', '7')  # standard, perturbed
-PERTURBED_MODEL_INDEX = '3'     # 8b-500b within PERTURBED_MODELS
+PERTURBED_MODEL_INDEX = '3'  # 8b-500b within PERTURBED_MODELS
 PAPER_MEM_ATTACKS = ('loss', 'zlib', 'min_k', 'min_k_plus_plus', 'reference')
 
 
@@ -246,14 +246,14 @@ class PipelineRunner:
             name='eval_standard_8b_500b',
             script_rel='spiking/data_generation/run_evals.py',
             gpu=True,
-            extra_env={'SLURM_ARRAY_TASK_ID': RUN_EVAL_TASK_IDS[0]},
+            extra_env={'HUBBLE_TASK_ID': RUN_EVAL_TASK_IDS[0]},
         )
         self._run_script(
             stage='shared_inputs',
             name='eval_perturbed_8b_500b',
             script_rel='spiking/data_generation/run_evals.py',
             gpu=True,
-            extra_env={'SLURM_ARRAY_TASK_ID': RUN_EVAL_TASK_IDS[1]},
+            extra_env={'HUBBLE_TASK_ID': RUN_EVAL_TASK_IDS[1]},
         )
 
         for attack in PAPER_MEM_ATTACKS:

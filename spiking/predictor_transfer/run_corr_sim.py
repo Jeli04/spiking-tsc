@@ -15,9 +15,9 @@ Predictors:
 No GPU needed. Runs in minutes on CPU.
 
 Usage:
-  uv run python src/spiking/predictor_transfer/run_corr_sim.py
-  uv run python src/spiking/predictor_transfer/run_corr_sim.py --source mmlu
-  uv run python src/spiking/predictor_transfer/run_corr_sim.py --regime both
+  uv run python spiking/predictor_transfer/run_corr_sim.py
+  uv run python spiking/predictor_transfer/run_corr_sim.py --source mmlu
+  uv run python spiking/predictor_transfer/run_corr_sim.py --regime both
 """
 
 import argparse
@@ -53,7 +53,7 @@ from hubble.simulation import (
 
 RESULTS_DIR = Path(__file__).parent / 'results'
 FIGURES_DIR = Path(__file__).parent / 'figures'
-PAPER_DIR = Path(__file__).resolve().parent.parent  # src/spiking/
+PAPER_DIR = Path(__file__).resolve().parent.parent  # spiking/
 DATA_RESULTS = PAPER_DIR / 'data_generation' / 'results'
 EXP50_DIR = DATA_RESULTS
 EXP53_DIR = PAPER_DIR / 'memorization' / 'results'
@@ -340,7 +340,7 @@ def main():
                             'corr_predictor': corr_predictor,
                             **result,
                         })
-                    print(f'    random/{dose_group}: done')
+                    print(f'  random/{dose_group}: done')
 
             # Correlated regime.
             has_confidence = sim_pool.confidence is not None
@@ -362,7 +362,7 @@ def main():
                             'corr_predictor': corr_predictor,
                             **result,
                         })
-                    print(f'    correlated/{difficulty_bin}: done')
+                    print(f'  correlated/{difficulty_bin}: done')
 
     # Save raw results.
     results_df = pd.DataFrame(all_rows)

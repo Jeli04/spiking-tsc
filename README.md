@@ -31,6 +31,17 @@ huggingface-cli login
 The scripts write results next to their module, usually under
 `spiking/<module>/results/` and figures under `spiking/<module>/figures/`.
 
+## Data And Models
+
+This repository is a code release. It does not include generated experiment
+caches, model weights, or large intermediate artifacts. The data-generation
+commands below create the parquet/NPZ caches expected by downstream stages.
+
+Model weights are loaded from Hugging Face by default. Use
+`--local-models` where supported to download external LLMs into `models/`;
+that directory is ignored by Git. Generated outputs under `results/`,
+`figures/`, and `cache/` are also ignored.
+
 ## Run Everything
 
 To run all paper experiment stages in order, use the main pipeline under

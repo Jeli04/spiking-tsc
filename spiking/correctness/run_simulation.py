@@ -7,12 +7,12 @@ Naive, IPW, Imputation, and Combined.
 No GPU needed. Runs in minutes on CPU.
 
 Usage:
-  uv run python src/spiking/correctness/run_simulation.py
-  uv run python src/spiking/correctness/run_simulation.py --benchmark mmlu
+  uv run python spiking/correctness/run_simulation.py
+  uv run python spiking/correctness/run_simulation.py --benchmark mmlu
 
   # Include cached Pythia predictions.
-  uv run python src/spiking/correctness/run_simulation.py --pythia-size 6.9b
-  uv run python src/spiking/correctness/run_simulation.py --pythia-size 6.9b --perturbed-labels
+  uv run python spiking/correctness/run_simulation.py --pythia-size 6.9b
+  uv run python spiking/correctness/run_simulation.py --pythia-size 6.9b --perturbed-labels
 """
 
 import argparse
@@ -257,10 +257,10 @@ def main():
                     **result,
                 }
                 benchmark_rows.append(row)
-                print(f'      random / {dose_group:>4s} / {corr_predictor:<14s}  '
-                      f'naive={result["naive_rmse"]*100:.1f}pp  '
-                      f'ipw={result["ipw_rmse"]*100:.1f}pp  '
-                      f'impute={result["imputation_rmse"]*100:.1f}pp  '
+                print(f'  random / {dose_group} / {corr_predictor}: '
+                      f'naive={result["naive_rmse"]*100:.1f}pp; '
+                      f'ipw={result["ipw_rmse"]*100:.1f}pp; '
+                      f'impute={result["imputation_rmse"]*100:.1f}pp; '
                       f'combined={result["combined_rmse"]*100:.1f}pp')
 
         # Correlated regime: high dose x difficulty bins x correctness predictors.
@@ -281,10 +281,10 @@ def main():
                         **result,
                     }
                     benchmark_rows.append(row)
-                    print(f'  correlated / {difficulty_bin:>6s} / {corr_predictor:<14s}  '
-                          f'naive={result["naive_rmse"]*100:.1f}pp  '
-                          f'ipw={result["ipw_rmse"]*100:.1f}pp  '
-                          f'impute={result["imputation_rmse"]*100:.1f}pp  '
+                    print(f'  correlated / {difficulty_bin} / {corr_predictor}: '
+                          f'naive={result["naive_rmse"]*100:.1f}pp; '
+                          f'ipw={result["ipw_rmse"]*100:.1f}pp; '
+                          f'impute={result["imputation_rmse"]*100:.1f}pp; '
                           f'combined={result["combined_rmse"]*100:.1f}pp')
 
         bm_df = pd.DataFrame(benchmark_rows)
