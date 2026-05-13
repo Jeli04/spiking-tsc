@@ -1,4 +1,4 @@
-"""Train per-benchmark RoBERTa correctness probes and generate c_hat predictions.
+"""Train per-benchmark RoBERTa correctness predictors and generate c_hat predictions.
 
 For each benchmark, fine-tunes RoBERTa on clean calibration items (text -> correctness),
 extracts scores, and uses sigmoid probabilities directly as c_hat on simulation items.
@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 
 from spiking.config import BENCHMARKS, MODELS
-from hubble.corr_probes import RoBERTaCorrectnessProbe
+from hubble.corr_predictors import RoBERTaCorrectnessPredictor
 from hubble.metrics import metrics_by_dose
 from hubble.results import (
     align_texts_to_eval_rows,
@@ -34,11 +34,18 @@ from hubble.results import (
 )
 from hubble.simulation import stratified_split
 
-from _reporting import (
-    format_quality_table,
-    metrics_to_row,
-    print_full_metrics,
-)
+try:
+    from ._reporting import (
+        format_quality_table,
+        metrics_to_row,
+        print_full_metrics,
+    )
+except ImportError:
+    from _reporting import (
+        format_quality_table,
+        metrics_to_row,
+        print_full_metrics,
+    )
 
 RESULTS_DIR = Path(__file__).parent / 'results'
 CACHE_DIR = Path(__file__).parent / 'cache'
@@ -50,7 +57,7 @@ DATA_RESULTS = Path(__file__).resolve().parent.parent / 'data_generation' / 'res
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Train per-benchmark RoBERTa correctness probes and generate c_hat predictions.'
+        description='Train per-benchmark RoBERTa correctness predictors and generate c_hat predictions.'
     )
     parser.add_argument('--benchmark', type=str, default=None,
                         choices=BENCHMARKS,
@@ -88,7 +95,7 @@ def main():
     qonly_suffix = '_qonly' if args.question_only else ''
 
     benchmarks = [args.benchmark] if args.benchmark else list(BENCHMARKS)
-    probe_name = ('roberta_platt' if args.platt else 'roberta') + qonly_suffix
+    predictor_name = ('roberta_platt' if args.platt else 'roberta') + qonly_suffix
 
     for benchmark in benchmarks:
         for model in MODELS:
@@ -132,9 +139,9 @@ def main():
                 cal_scores = all_scores[cal_idx][clean_cal_mask]
                 sim_scores = all_scores[sim_idx]
 
-                probe = RoBERTaCorrectnessProbe(model_dir=model_dir)
-                probe.fit(cal_scores, labels_cal_clean)
-                c_hat_sim = probe.predict_proba(sim_scores)[:, 1]
+                predictor = RoBERTaCorrectnessPredictor(model_dir=model_dir)
+                predictor.fit(cal_scores, labels_cal_clean)
+                c_hat_sim = predictor.predict_proba(sim_scores)[:, 1]
 
                 print(f'  Platt scaling on {clean_cal_mask.sum()} clean cal items '
                       f'(of {len(cal_idx)} total)')
@@ -154,9 +161,9 @@ def main():
                 print(f'  Training on {len(train_texts)} clean cal items '
                       f'(of {len(cal_idx)} total)')
 
-                probe = RoBERTaCorrectnessProbe(
+                predictor = RoBERTaCorrectnessPredictor(
                     model_dir=model_dir, max_length=args.max_length)
-                probe.train_model(
+                predictor.train_model(
                     train_texts, train_labels,
                     epochs=args.epochs,
                     batch_size=args.batch_size,
@@ -167,7 +174,7 @@ def main():
                     freeze_layers=tuple(args.freeze_layers) if args.freeze_layers else None,
                 )
 
-                all_scores = probe.extract_scores(
+                all_scores = predictor.extract_scores(
                     texts, batch_size=args.batch_size * 2,
                     cache_path=scores_cache,
                 )
@@ -185,12 +192,12 @@ def main():
             quality_rows.append({
                 'benchmark': benchmark,
                 'model': model,
-                'probe': probe_name,
+                'predictor': predictor_name,
                 **metrics_to_row(brier, auroc, bal_acc, bias, variance, len(cal_idx), len(sim_idx)),
             })
-            print_full_metrics(probe_name, brier, auroc, bal_acc, bias, variance)
+            print_full_metrics(predictor_name, brier, auroc, bal_acc, bias, variance)
 
-            # Save c_hat arrays for simulation, preserving other probes.
+            # Save c_hat arrays for simulation, preserving other predictors.
             label_dir = 'perturbed_labels' if args.perturbed_labels else 'standard_labels'
             out_dir = RESULTS_DIR / label_dir / benchmark
             out_dir.mkdir(parents=True, exist_ok=True)
@@ -199,13 +206,13 @@ def main():
             if roberta_path.exists():
                 with np.load(roberta_path) as data:
                     existing = {k: data[k] for k in data}
-            existing[probe_name] = c_hat_sim
+            existing[predictor_name] = c_hat_sim
             np.savez(roberta_path, **existing)
 
     # Save results.
     quality_df = pd.DataFrame(quality_rows)
-    quality_df.to_csv(RESULTS_DIR / f'probe_quality{qonly_suffix}.csv', index=False)
-    quality_df.to_parquet(RESULTS_DIR / f'probe_quality{qonly_suffix}.parquet')
+    quality_df.to_csv(RESULTS_DIR / f'predictor_quality{qonly_suffix}.csv', index=False)
+    quality_df.to_parquet(RESULTS_DIR / f'predictor_quality{qonly_suffix}.parquet')
 
     # Write markdown table.
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)

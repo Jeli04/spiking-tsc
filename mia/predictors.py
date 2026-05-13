@@ -1,4 +1,4 @@
-"""MIA probes: threshold-based binary classifiers over attack scores."""
+"""MIA predictors: threshold-based binary classifiers over attack scores."""
 
 from __future__ import annotations
 
@@ -18,11 +18,11 @@ from sklearn.metrics import (
 )
 from tqdm import tqdm
 
-from hubble.probes import Probe
+from hubble.predictors import Predictor
 
 
-class AttackProbe(Probe):
-    """Probe that wraps any attack function from ``mia.attacks``.
+class AttackPredictor(Predictor):
+    """Predictor that wraps any attack function from ``mia.attacks``.
 
     Computes MIA scores on the fly by running model inference on a text
     column of the DataFrame.
@@ -30,9 +30,9 @@ class AttackProbe(Probe):
     Example::
 
         from mia.attacks import min_k
-        probe = AttackProbe(min_k, model, tokenizer, k=0.3)
-        probe.fit(df, labels)
-        probs = probe.predict_proba(df)
+        predictor = AttackPredictor(min_k, model, tokenizer, k=0.3)
+        predictor.fit(df, labels)
+        probs = predictor.predict_proba(df)
     """
 
     threshold_: float | None = None
@@ -143,16 +143,16 @@ class AttackProbe(Probe):
         }
 
 
-class PrecomputedProbe(AttackProbe):
-    """Probe that reads pre-computed score columns from a DataFrame.
+class PrecomputedPredictor(AttackPredictor):
+    """Predictor that reads pre-computed score columns from a DataFrame.
 
     Reads columns named ``{col_prefix}{option}_{model_key}`` for each option,
     then takes the max across options as the MIA score. No model needed.
 
     Example::
 
-        probe = PrecomputedProbe("hubble-1b", ["A", "B"], col_prefix="logprob_")
-        probe.fit(df, labels)
+        predictor = PrecomputedPredictor("hubble-1b", ["A", "B"], col_prefix="logprob_")
+        predictor.fit(df, labels)
     """
 
     def __init__(self, model_key: str, option_cols: list[str],
@@ -174,4 +174,4 @@ class PrecomputedProbe(AttackProbe):
 
 
 # Backward-compatible alias
-LogprobCorrectProbe = PrecomputedProbe
+LogprobCorrectPredictor = PrecomputedPredictor

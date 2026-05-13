@@ -1,26 +1,26 @@
-"""Visualize probe transfer results as cross-benchmark heatmaps.
+"""Visualize predictor transfer results as cross-benchmark heatmaps.
 
 Supports both memorization transfer (run_mem_sim.py) and correctness
 transfer (run_corr_sim.py) results.
 
 Usage:
   # Memorization transfer (default): d_hat varies by source.
-  uv run python src/spiking/probe_transfer/visualize.py
+  uv run python src/spiking/predictor_transfer/visualize.py
 
-  # Specific memorization probes.
-  uv run python src/spiking/probe_transfer/visualize.py \
+  # Specific memorization predictors.
+  uv run python src/spiking/predictor_transfer/visualize.py \
       --method min_k_plus_plus loss
 
   # Correctness transfer: c_hat varies by source.
-  uv run python src/spiking/probe_transfer/visualize.py \
+  uv run python src/spiking/predictor_transfer/visualize.py \
       --mode corr
 
-  # Specific correctness probes.
-  uv run python src/spiking/probe_transfer/visualize.py \
+  # Specific correctness predictors.
+  uv run python src/spiking/predictor_transfer/visualize.py \
       --mode corr --method llama_platt roberta
 
   # Average across all settings.
-  uv run python src/spiking/probe_transfer/visualize.py \
+  uv run python src/spiking/predictor_transfer/visualize.py \
       --dose-group avg
 """
 
@@ -63,18 +63,18 @@ ALL_BENCHMARKS = list(BENCHMARK_LABELS.keys())
 # Plot settings for memorization and correctness transfer.
 MODE_CONFIG = {
     'mem': {
-        'probe_col': 'mem_probe',
+        'predictor_col': 'mem_predictor',
         'labels': MEM_LABELS,
         'default_metric': 'ipw_rmse',
         'results_file': 'transfer_simulation_results.parquet',
-        'title_prefix': 'Memorization Probe Transfer',
+        'title_prefix': 'Memorization Predictor Transfer',
     },
     'corr': {
-        'probe_col': 'corr_probe',
+        'predictor_col': 'corr_predictor',
         'labels': CORR_LABELS,
         'default_metric': 'imputation_rmse',
         'results_file': 'corr_transfer_simulation_results.parquet',
-        'title_prefix': 'Correctness Probe Transfer',
+        'title_prefix': 'Correctness Predictor Transfer',
     },
 }
 
@@ -82,7 +82,7 @@ MODE_CONFIG = {
 def _split_benchmarks(benchmarks):
     """Split benchmarks into sources (all) and targets (no wikipedia).
 
-    Wikipedia is source-only: it can supply probes but is not a standard
+    Wikipedia is source-only: it can supply predictors but is not a standard
     evaluation benchmark, so it never appears as a target.
     """
     sources = list(benchmarks)
@@ -90,14 +90,14 @@ def _split_benchmarks(benchmarks):
     return sources, targets
 
 
-def build_heatmap_matrix(df, sources, targets, probe_col, method, dose_group,
+def build_heatmap_matrix(df, sources, targets, predictor_col, method, dose_group,
                          metric='ipw_rmse'):
     """Build source x target matrix for one method.
 
     Returns (matrix, naive_row) where matrix is (n_src, n_tgt) and
     naive_row is shape (n_tgt,) with the naive RMSE per target benchmark.
     """
-    subset = df[(df[probe_col] == method) & (df['dose_group'] == dose_group)]
+    subset = df[(df[predictor_col] == method) & (df['dose_group'] == dose_group)]
     n_src, n_tgt = len(sources), len(targets)
     matrix = np.full((n_src, n_tgt), np.nan)
     naive_row = np.full(n_tgt, np.nan)
@@ -110,14 +110,14 @@ def build_heatmap_matrix(df, sources, targets, probe_col, method, dose_group,
     return matrix, naive_row
 
 
-def build_average_heatmap_matrix(df, sources, targets, probe_col, method,
+def build_average_heatmap_matrix(df, sources, targets, predictor_col, method,
                                  metric='ipw_rmse'):
     """Build source x target matrix averaged across all settings.
 
     Averages across all rows available for a given (source, target, method),
     e.g. low/mid/high random and easy/medium/hard correlated.
     """
-    subset = df[df[probe_col] == method]
+    subset = df[df[predictor_col] == method]
     n_src, n_tgt = len(sources), len(targets)
     matrix = np.full((n_src, n_tgt), np.nan)
     naive_row = np.full(n_tgt, np.nan)
@@ -196,7 +196,7 @@ def _draw_panel(ax, matrix, naive_row, x_labels, y_labels_src, vmin, vmax,
     ax.tick_params(axis='y', rotation=0, which='both')
 
 
-def plot_heatmaps(df, benchmarks, methods, dose_group, probe_col,
+def plot_heatmaps(df, benchmarks, methods, dose_group, predictor_col,
                   method_labels, title_prefix, metric='ipw_rmse',
                   scale=100, out_path=None, vmin=None, vmax=None):
     """Plot one heatmap per method, arranged in a row."""
@@ -211,10 +211,10 @@ def plot_heatmaps(df, benchmarks, methods, dose_group, probe_col,
     for method in methods:
         if dose_group == 'avg':
             matrix, naive_row = build_average_heatmap_matrix(
-                df, sources, targets, probe_col, method, metric)
+                df, sources, targets, predictor_col, method, metric)
         else:
             matrix, naive_row = build_heatmap_matrix(
-                df, sources, targets, probe_col, method, dose_group, metric)
+                df, sources, targets, predictor_col, method, dose_group, metric)
         all_values.append(matrix)
         naive_rows.append(naive_row)
 
@@ -250,7 +250,7 @@ def plot_heatmaps(df, benchmarks, methods, dose_group, probe_col,
     plt.close(fig)
 
 
-def plot_heatmaps_all_doses(df, benchmarks, methods, probe_col,
+def plot_heatmaps_all_doses(df, benchmarks, methods, predictor_col,
                             method_labels, metric='ipw_rmse',
                             scale=100, out_path=None):
     """Plot methods as rows, dose groups (low/mid/high) as columns."""
@@ -266,7 +266,7 @@ def plot_heatmaps_all_doses(df, benchmarks, methods, probe_col,
     all_vals = []
     for method in methods:
         for dose in DOSE_GROUPS:
-            matrix, naive_row = build_heatmap_matrix(df, sources, targets, probe_col,
+            matrix, naive_row = build_heatmap_matrix(df, sources, targets, predictor_col,
                                                      method, dose, metric)
             all_data[(method, dose)] = (matrix, naive_row)
             all_vals.extend([matrix.ravel(), naive_row])
@@ -345,7 +345,7 @@ def _format_cell(val, scale=100):
     return f'{val * scale:.1f}'
 
 
-def _build_latex_table_for_method(df, sources, targets, probe_col, method,
+def _build_latex_table_for_method(df, sources, targets, predictor_col, method,
                                   method_label, metric='ipw_rmse', scale=100):
     """Build one LaTeX table for a single method with low/mid/high blocks."""
     target_labels = [BENCHMARK_LABELS.get(t, t) for t in targets]
@@ -355,7 +355,7 @@ def _build_latex_table_for_method(df, sources, targets, probe_col, method,
     naive_rows = {}
     for dose in DOSE_GROUPS:
         matrix, naive_row = build_heatmap_matrix(
-            df, sources, targets, probe_col, method, dose, metric
+            df, sources, targets, predictor_col, method, dose, metric
         )
         matrices[dose] = matrix
         naive_rows[dose] = naive_row
@@ -420,7 +420,7 @@ def _build_latex_table_for_method(df, sources, targets, probe_col, method,
     return '\n'.join(lines)
 
 
-def write_latex_tables_all_doses(df, benchmarks, methods, probe_col,
+def write_latex_tables_all_doses(df, benchmarks, methods, predictor_col,
                                  method_labels, metric='ipw_rmse',
                                  scale=100, out_path=None):
     """Write LaTeX tables for the all-doses matrices.
@@ -437,7 +437,7 @@ def write_latex_tables_all_doses(df, benchmarks, methods, probe_col,
                 df=df,
                 sources=sources,
                 targets=targets,
-                probe_col=probe_col,
+                predictor_col=predictor_col,
                 method=method,
                 method_label=method_label,
                 metric=metric,
@@ -456,7 +456,7 @@ def write_latex_tables_all_doses(df, benchmarks, methods, probe_col,
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Visualize probe transfer as cross-benchmark heatmaps')
+        description='Visualize predictor transfer as cross-benchmark heatmaps')
     parser.add_argument('--mode', default='mem', choices=['mem', 'corr'],
                         help='Transfer mode: mem (d_hat varies) or corr (c_hat varies)')
     parser.add_argument('--benchmarks', nargs='+', default=None,
@@ -474,7 +474,7 @@ def main():
     args = parser.parse_args()
 
     cfg = MODE_CONFIG[args.mode]
-    probe_col = cfg['probe_col']
+    predictor_col = cfg['predictor_col']
     method_labels = cfg['labels']
     metric = args.metric or cfg['default_metric']
 
@@ -486,7 +486,7 @@ def main():
 
     benchmarks = args.benchmarks or ALL_BENCHMARKS
     methods = args.method or [
-        m for m in method_labels if m in df[probe_col].unique()
+        m for m in method_labels if m in df[predictor_col].unique()
     ]
 
     available_src = set(df['source'].unique())
@@ -500,24 +500,24 @@ def main():
 
     if args.dose_group == 'all':
         plot_heatmaps_all_doses(
-            df, benchmarks, methods, probe_col,
+            df, benchmarks, methods, predictor_col,
             method_labels, metric,
             out_path=FIGURES_DIR / f'{prefix}_transfer_heatmap_all_doses.pdf',
         )
         write_latex_tables_all_doses(
-            df, benchmarks, methods, probe_col,
+            df, benchmarks, methods, predictor_col,
             method_labels, metric,
             out_path=FIGURES_DIR / f'{prefix}_transfer_heatmap_all_doses.tex',
         )
 
         for method in methods:
             plot_heatmaps_all_doses(
-                df, benchmarks, [method], probe_col,
+                df, benchmarks, [method], predictor_col,
                 method_labels, metric,
                 out_path=FIGURES_DIR / f'{prefix}_transfer_heatmap_{method}_all_doses.pdf',
             )
             write_latex_tables_all_doses(
-                df, benchmarks, [method], probe_col,
+                df, benchmarks, [method], predictor_col,
                 method_labels, metric,
                 out_path=FIGURES_DIR / f'{prefix}_transfer_heatmap_{method}_all_doses.tex',
             )
@@ -526,10 +526,10 @@ def main():
         for method in methods:
             if args.dose_group == 'avg':
                 matrix, naive_row = build_average_heatmap_matrix(
-                    df, sources, targets, probe_col, method, metric)
+                    df, sources, targets, predictor_col, method, metric)
             else:
                 matrix, naive_row = build_heatmap_matrix(
-                    df, sources, targets, probe_col, method, args.dose_group, metric)
+                    df, sources, targets, predictor_col, method, args.dose_group, metric)
             all_vals.extend([matrix.ravel(), naive_row])
 
         all_vals_flat = np.concatenate(all_vals)
@@ -540,14 +540,14 @@ def main():
         suffix = 'average' if args.dose_group == 'avg' else args.dose_group
 
         plot_heatmaps(
-            df, benchmarks, methods, args.dose_group, probe_col,
+            df, benchmarks, methods, args.dose_group, predictor_col,
             method_labels, cfg['title_prefix'], metric,
             out_path=FIGURES_DIR / f'{prefix}_transfer_heatmap_{suffix}.pdf',
             vmin=global_vmin, vmax=global_vmax,
         )
         for method in methods:
             plot_heatmaps(
-                df, benchmarks, [method], args.dose_group, probe_col,
+                df, benchmarks, [method], args.dose_group, predictor_col,
                 method_labels, cfg['title_prefix'], metric,
                 out_path=FIGURES_DIR / f'{prefix}_transfer_heatmap_{method}_{suffix}.pdf',
                 vmin=global_vmin, vmax=global_vmax,

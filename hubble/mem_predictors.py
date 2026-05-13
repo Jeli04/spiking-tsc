@@ -1,11 +1,11 @@
-"""Memorization probes: detect P(contaminated | x).
+"""Memorization predictors: detect P(contaminated | x).
 
-Three probe families:
-  - MIAProbe: Platt-scaled logistic regression on pre-computed MIA attack
+Three predictor families:
+  - MIAPredictor: Platt-scaled logistic regression on pre-computed MIA attack
     scores (CPU only, no model needed).
-  - HiddenStateProbe: Extract pooled hidden states from a transformer layer,
+  - HiddenStatePredictor: Extract pooled hidden states from a transformer layer,
     fit logistic regression (GPU for extraction, CPU for fitting).
-  - ResidualProbe: Extract pooled residual stream from a specific transformer
+  - ResidualPredictor: Extract pooled residual stream from a specific transformer
     layer via hooks, fit logistic regression (GPU for extraction, CPU for fitting).
 """
 
@@ -28,10 +28,10 @@ from sklearn.preprocessing import StandardScaler
 # Base class
 # ==========================================================================
 
-class Probe(ABC):
-    """Base class for all probes (memorization and correctness).
+class Predictor(ABC):
+    """Base class for all predictors (memorization and correctness).
 
-    All probes expose a unified fit/predict interface. Subclasses accept
+    All predictors expose a unified fit/predict interface. Subclasses accept
     pre-computed features (numpy arrays) or DataFrames, depending on type.
     """
 
@@ -43,7 +43,7 @@ class Probe(ABC):
 
     @abstractmethod
     def fit(self, data, labels, **kwargs) -> None:
-        """Train the probe on pre-computed features and labels."""
+        """Train the predictor on pre-computed features and labels."""
         ...
 
     @abstractmethod
@@ -58,11 +58,11 @@ class Probe(ABC):
 
 
 # ==========================================================================
-# MIA probes (pre-computed scores + Platt scaling)
+# MIA predictors (pre-computed scores + Platt scaling)
 # ==========================================================================
 
-class MIAProbe(Probe):
-    """Platt-scaled memorization probe on pre-computed MIA attack scores.
+class MIAPredictor(Predictor):
+    """Platt-scaled memorization predictor on pre-computed MIA attack scores.
 
     NOTE: [pedagogical] Platt scaling converts a raw score into a calibrated
     probability by fitting a logistic regression on the score as a single
@@ -73,9 +73,9 @@ class MIAProbe(Probe):
 
     Usage::
 
-        probe = MIAProbe('min_k_plus_plus')
-        probe.fit(scores_cal, labels_cal)
-        d_hat = probe.predict_proba(scores_sim)
+        predictor = MIAPredictor('min_k_plus_plus')
+        predictor.fit(scores_cal, labels_cal)
+        d_hat = predictor.predict_proba(scores_sim)
     """
 
     def __init__(self, score_col: str):
@@ -110,11 +110,11 @@ class MIAProbe(Probe):
 
 
 # ==========================================================================
-# Hidden state probes (frozen features + sklearn)
+# Hidden state predictors (frozen features + sklearn)
 # ==========================================================================
 
-class HiddenStateProbe(Probe):
-    """Probe on pooled hidden states from a specific transformer layer.
+class HiddenStatePredictor(Predictor):
+    """Predictor on pooled hidden states from a specific transformer layer.
 
     Two-phase usage:
       1. extract_features() — GPU. Extract and cache pooled hidden states.
@@ -124,15 +124,15 @@ class HiddenStateProbe(Probe):
 
     Usage::
 
-        probe = FinalLayerLinear()
+        predictor = FinalLayerLinear()
 
         # Phase 1: extract (GPU, typically cached by exp 12)
-        probe.extract_features(model, tokenizer, texts, cache_path=path)
+        predictor.extract_features(model, tokenizer, texts, cache_path=path)
 
         # Phase 2: fit + predict (CPU, on pre-loaded arrays)
         features = np.load(path)['hidden_states']
-        probe.fit(features[cal_idx], labels_cal)
-        d_hat = probe.predict_proba(features[sim_idx])
+        predictor.fit(features[cal_idx], labels_cal)
+        d_hat = predictor.predict_proba(features[sim_idx])
     """
 
     layer: int = -1
@@ -245,45 +245,45 @@ class HiddenStateProbe(Probe):
         return self._clf.predict_proba(np.asarray(data))[:, 1]
 
 
-class FinalLayerLinear(HiddenStateProbe):
+class FinalLayerLinear(HiddenStatePredictor):
     """Last hidden layer, mean pool, logistic regression."""
 
     layer = -1
-    pool = staticmethod(HiddenStateProbe.mean)
+    pool = staticmethod(HiddenStatePredictor.mean)
 
 
-class FinalLayerLastTokenLinear(HiddenStateProbe):
+class FinalLayerLastTokenLinear(HiddenStatePredictor):
     """Last hidden layer, last-token pool, logistic regression."""
 
     layer = -1
-    pool = staticmethod(HiddenStateProbe.last)
+    pool = staticmethod(HiddenStatePredictor.last)
 
 
 # ==========================================================================
-# Residual stream probes (hook-based extraction + sklearn)
+# Residual stream predictors (hook-based extraction + sklearn)
 # ==========================================================================
 
 DEFAULT_RESIDUAL_LAYERS = list(range(26, 36))
 
 
-class ResidualProbe(HiddenStateProbe):
-    """Probe on pooled residual stream from a specific transformer layer.
+class ResidualPredictor(HiddenStatePredictor):
+    """Predictor on pooled residual stream from a specific transformer layer.
 
-    Unlike HiddenStateProbe which uses ``output_hidden_states``, this probe
+    Unlike HiddenStatePredictor which uses ``output_hidden_states``, this predictor
     hooks into ``layer.post_attention_layernorm`` to capture the residual
     stream input (same hook point as exp 06).
 
     Usage::
 
-        probe = ResidualProbe(layer=30, pool_name='mean')
+        predictor = ResidualPredictor(layer=30, pool_name='mean')
 
         # Phase 1: extract (GPU)
-        probe.extract_features(model, tokenizer, texts, cache_path=path)
+        predictor.extract_features(model, tokenizer, texts, cache_path=path)
 
         # Phase 2: fit + predict (CPU)
         features = np.load(path)['hidden_states']
-        probe.fit(features[cal_idx], labels_cal)
-        d_hat = probe.predict_proba(features[sim_idx])
+        predictor.fit(features[cal_idx], labels_cal)
+        d_hat = predictor.predict_proba(features[sim_idx])
     """
 
     def __init__(self, layer: int = 35, pool_name: str = 'mean', seed: int = 42):
@@ -291,9 +291,9 @@ class ResidualProbe(HiddenStateProbe):
         self._layer = layer
         self._pool_name = pool_name
         if pool_name == 'mean':
-            self._pool_fn = HiddenStateProbe.mean
+            self._pool_fn = HiddenStatePredictor.mean
         elif pool_name == 'last':
-            self._pool_fn = HiddenStateProbe.last
+            self._pool_fn = HiddenStatePredictor.last
         else:
             raise ValueError(f'Unknown pool_name: {pool_name!r}')
 
@@ -464,8 +464,8 @@ class ResidualProbe(HiddenStateProbe):
 
         # Pool and save
         pool_fns = {
-            'mean': HiddenStateProbe.mean,
-            'last': HiddenStateProbe.last,
+            'mean': HiddenStatePredictor.mean,
+            'last': HiddenStatePredictor.last,
         }
 
         results = dict(cached)
@@ -502,12 +502,12 @@ class ResidualProbe(HiddenStateProbe):
 # Registry
 # ==========================================================================
 
-PROBES: dict[str, type[HiddenStateProbe]] = {
+PREDICTORS: dict[str, type[HiddenStatePredictor]] = {
     'final_layer_linear': FinalLayerLinear,
     'final_layer_last_token_linear': FinalLayerLastTokenLinear,
 }
 
-RESIDUAL_PROBES: dict[str, tuple[int, str]] = {}
+RESIDUAL_PREDICTORS: dict[str, tuple[int, str]] = {}
 for _layer in DEFAULT_RESIDUAL_LAYERS:
     for _pool in ('mean', 'last'):
-        RESIDUAL_PROBES[f'residual_L{_layer}_{_pool}'] = (_layer, _pool)
+        RESIDUAL_PREDICTORS[f'residual_L{_layer}_{_pool}'] = (_layer, _pool)

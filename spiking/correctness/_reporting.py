@@ -57,9 +57,9 @@ def metrics_to_row(brier, auroc, bal_acc, bias, variance, n_cal, n_sim):
     return row
 
 
-def print_full_metrics(probe_name, brier, auroc, bal_acc, bias, variance):
-    """Print one-line summary for a probe."""
-    print(f'  {probe_name:<20s}  '
+def print_full_metrics(predictor_name, brier, auroc, bal_acc, bias, variance):
+    """Print one-line summary for a predictor."""
+    print(f'  {predictor_name:<20s}  '
           f'brier: clean={brier["clean"]:.4f} contam={brier["contaminated"]:.4f} all={brier["all"]:.4f}  '
           f'auroc: low={auroc["low"]:.4f} mid={auroc["mid"]:.4f} high={auroc["high"]:.4f} all={auroc["all"]:.4f}  '
           f'bal_acc: low={bal_acc["low"]:.4f} mid={bal_acc["mid"]:.4f} high={bal_acc["high"]:.4f} all={bal_acc["all"]:.4f}  '
@@ -74,7 +74,7 @@ def format_quality_table(quality_df):
     for benchmark, bm_group in quality_df.groupby('benchmark'):
         lines.append(f'\n### {benchmark}\n')
         header_cols = [
-            'Probe', 'Model',
+            'Predictor', 'Model',
             'Brier Clean', 'Brier Contam', 'Brier All',
             'AUROC Low', 'AUROC Mid', 'AUROC High',
             'AUROC Clean', 'AUROC Contam', 'AUROC All',
@@ -89,7 +89,7 @@ def format_quality_table(quality_df):
         lines.append('|' + '|'.join(['---'] * len(header_cols)) + '|')
         for _, row in bm_group.iterrows():
             lines.append(
-                f'| {row["probe"]:<20s} '
+                f'| {row["predictor"]:<20s} '
                 f'| {row["model"]:<8s} '
                 f'| {row["brier_clean"]:.4f}      '
                 f'| {row["brier_contaminated"]:.4f}       '
@@ -133,7 +133,7 @@ def _bold_best(val, best_val):
 def format_bias_latex_table(quality_df):
     """LaTeX table showing absolute bias by difficulty bin."""
     benchmarks = [b for b in BENCHMARK_LABELS_LONG if b in quality_df['benchmark'].unique()]
-    probes = quality_df['probe'].unique()
+    predictors = quality_df['predictor'].unique()
 
     best = {}
     for bench in benchmarks:
@@ -151,7 +151,7 @@ def format_bias_latex_table(quality_df):
         r'\begin{tabular}{l' + 'cccc' * n + '}',
         r'\toprule',
     ]
-    h1 = r'\textbf{Probe}'
+    h1 = r'\textbf{Predictor}'
     for bench in benchmarks:
         h1 += rf' & \multicolumn{{4}}{{c}}{{\textbf{{{BENCHMARK_LABELS_LONG[bench]}}}}}'
     lines.append(h1 + r' \\')
@@ -164,10 +164,10 @@ def format_bias_latex_table(quality_df):
             h2 += rf' & \textbf{{{h}}}'
     lines.append(h2 + r' \\')
     lines.append(r'\midrule')
-    for probe in probes:
-        row = probe.replace('_', r'\_')
+    for predictor in predictors:
+        row = predictor.replace('_', r'\_')
         for bench in benchmarks:
-            sub = quality_df[(quality_df['benchmark'] == bench) & (quality_df['probe'] == probe)]
+            sub = quality_df[(quality_df['benchmark'] == bench) & (quality_df['predictor'] == predictor)]
             if sub.empty:
                 row += ' & -- & -- & -- & --'
                 continue
@@ -178,7 +178,7 @@ def format_bias_latex_table(quality_df):
     lines += [
         r'\bottomrule',
         r'\end{tabular}',
-        r'\caption{Correctness probe absolute bias ($|\text{mean error}|$) by item difficulty bin. '
+        r'\caption{Correctness predictor absolute bias ($|\text{mean error}|$) by item difficulty bin. '
         r'Lower values indicate less biased predictions.}',
         r'\label{tab:corr_abs_bias}',
         r'\end{table*}',

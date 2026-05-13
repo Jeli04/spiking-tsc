@@ -1,13 +1,13 @@
-"""Correctness probes: estimate P(correct | x) from scalar confidence.
+"""Correctness predictors: estimate P(correct | x) from scalar confidence.
 
-Three probe types:
-  - ConfidenceProbe: reads pre-computed confidence from a DataFrame column,
+Three predictor types:
+  - ConfidencePredictor: reads pre-computed confidence from a DataFrame column,
     applies Platt scaling. No model or tokenizer required.
-  - LLMConfidenceProbe: evaluates an external LLM on benchmark examples to
+  - LLMConfidencePredictor: evaluates an external LLM on benchmark examples to
     obtain per-example confidence, then applies Platt scaling. Two-phase
     (extract on GPU, fit/predict on CPU), following the same pattern as
-    HiddenStateProbe in mem_probes.
-  - RoBERTaCorrectnessProbe: fine-tunes RoBERTa on benchmark text to predict
+    HiddenStatePredictor in mem_predictors.
+  - RoBERTaCorrectnessPredictor: fine-tunes RoBERTa on benchmark text to predict
     correctness. Three-phase: train (GPU), extract scores (GPU), Platt scaling
     (CPU). Saves finetuned model for reuse.
 
@@ -26,11 +26,11 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 
-from hubble.mem_probes import Probe
+from hubble.mem_predictors import Predictor
 
 
-class ConfidenceProbe(Probe):
-    """Probe that reads scalar confidence and applies Platt scaling."""
+class ConfidencePredictor(Predictor):
+    """Predictor that reads scalar confidence and applies Platt scaling."""
 
     def __init__(self) -> None:
         self._lr: LogisticRegression | None = None
@@ -59,13 +59,13 @@ class ConfidenceProbe(Probe):
 
 
 # ==========================================================================
-# LLM confidence probe
+# LLM confidence predictor
 # ==========================================================================
 
-class LLMConfidenceProbe(Probe):
-    """Correctness probe that evaluates an external LLM, then applies Platt scaling.
+class LLMConfidencePredictor(Predictor):
+    """Correctness predictor that evaluates an external LLM, then applies Platt scaling.
 
-    Two-phase usage (mirrors HiddenStateProbe):
+    Two-phase usage (mirrors HiddenStatePredictor):
       1. extract_confidence() — GPU. Evaluate the LLM on benchmark examples,
          cache per-example confidence scores to a parquet file.
       2. fit() / predict_proba() — CPU. Platt scaling on pre-extracted
@@ -77,15 +77,15 @@ class LLMConfidenceProbe(Probe):
 
     Usage::
 
-        probe = LLMConfidenceProbe('meta-llama/Llama-3.1-8B')
+        predictor = LLMConfidencePredictor('meta-llama/Llama-3.1-8B')
 
         # Phase 1: extract confidence (GPU)
-        conf = probe.extract_confidence(model, tokenizer, df, 'mmlu',
+        conf = predictor.extract_confidence(model, tokenizer, df, 'mmlu',
                                         cache_path='cache/llama_mmlu.parquet')
 
         # Phase 2: fit + predict (CPU, on pre-extracted arrays)
-        probe.fit(conf[train_idx], labels_train)
-        c_hat = probe.predict_proba(conf[test_idx])
+        predictor.fit(conf[train_idx], labels_train)
+        c_hat = predictor.predict_proba(conf[test_idx])
     """
 
     # Benchmark -> evaluation type
@@ -192,11 +192,11 @@ class LLMConfidenceProbe(Probe):
 
 
 # ==========================================================================
-# RoBERTa correctness probe
+# RoBERTa correctness predictor
 # ==========================================================================
 
-class RoBERTaCorrectnessProbe(Probe):
-    """Fine-tuned RoBERTa probe for predicting LLM correctness from text.
+class RoBERTaCorrectnessPredictor(Predictor):
+    """Fine-tuned RoBERTa predictor for predicting LLM correctness from text.
 
     Three-phase usage:
       1. train_model() — GPU. Fine-tune RoBERTa on (text, correctness_label)
@@ -212,17 +212,17 @@ class RoBERTaCorrectnessProbe(Probe):
 
     Usage::
 
-        probe = RoBERTaCorrectnessProbe(model_dir='cache/roberta_correctness')
+        predictor = RoBERTaCorrectnessPredictor(model_dir='cache/roberta_correctness')
 
         # Phase 1: train (GPU) — skip if model_dir already exists
-        probe.train_model(train_texts, train_labels)
+        predictor.train_model(train_texts, train_labels)
 
         # Phase 2: extract scores (GPU)
-        scores = probe.extract_scores(texts, cache_path='cache/roberta_scores.npz')
+        scores = predictor.extract_scores(texts, cache_path='cache/roberta_scores.npz')
 
         # Phase 3: fit + predict (CPU, on pre-extracted scores)
-        probe.fit(scores[cal_idx], labels_cal)
-        c_hat = probe.predict_proba(scores[sim_idx])
+        predictor.fit(scores[cal_idx], labels_cal)
+        c_hat = predictor.predict_proba(scores[sim_idx])
     """
 
     def __init__(
@@ -507,6 +507,6 @@ class RoBERTaCorrectnessProbe(Probe):
 # Registry
 # ==========================================================================
 
-CORRECTNESS_PROBES: dict[str, type[Probe]] = {
-    'platt': ConfidenceProbe,
+CORRECTNESS_PREDICTORS: dict[str, type[Predictor]] = {
+    'platt': ConfidencePredictor,
 }

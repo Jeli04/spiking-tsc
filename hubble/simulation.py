@@ -32,8 +32,8 @@ class ItemPool:
     y_clean: np.ndarray     # binary outcomes from standard model (ground truth)
     duplicates: np.ndarray  # true duplication counts per item
     confidence: np.ndarray | None = None  # standard model confidence on correct answer
-    d_hat: np.ndarray | None = None  # P(contaminated | x), from a memorization probe
-    c_hat: np.ndarray | None = None  # E[Y_clean | x], from a correctness probe
+    d_hat: np.ndarray | None = None  # P(contaminated | x), from a memorization predictor
+    c_hat: np.ndarray | None = None  # E[Y_clean | x], from a correctness predictor
 
     def __post_init__(self):
         n = len(self.y_observed)
@@ -138,7 +138,7 @@ def stratified_split(
 
 @dataclass
 class TestSet:
-    """A sampled test set with probe predictions attached."""
+    """A sampled test set with predictor predictions attached."""
 
     y_observed: np.ndarray  # (n,) binary outcomes from perturbed model
     y_clean: np.ndarray     # (n,) binary outcomes from standard model
@@ -224,7 +224,7 @@ def epg_ipw_estimator(ts: TestSet, n_thresholds: int = 200) -> float:
 
 
 def imputation_estimator(ts: TestSet) -> float:
-    """Replace all outcomes with correctness probe predictions."""
+    """Replace all outcomes with correctness predictor predictions."""
     return ts.c_hat.mean()
 
 
@@ -242,12 +242,12 @@ ESTIMATORS: dict[str, Callable] = {
 
 
 # ---------------------------------------------------------------------------
-# Synthetic probe generators
+# Synthetic predictor generators
 # ---------------------------------------------------------------------------
 
 def _beta_auroc(mean_pos: float, concentration: float,
                 n_mc: int = 100_000) -> float:
-    """Monte Carlo AUROC for symmetric Beta probe.
+    """Monte Carlo AUROC for symmetric Beta predictor.
 
     Positive ~ Beta(m*c, (1-m)*c), Negative ~ Beta((1-m)*c, m*c).
     Uses Mann-Whitney U via ranking for O(n log n) efficiency.
@@ -284,13 +284,13 @@ def _find_mean_for_auroc(target_auroc: float, concentration: float,
     return (lo + hi) / 2
 
 
-def make_synthetic_memorization_probe(
+def make_synthetic_memorization_predictor(
     true_labels: np.ndarray,
     alpha: float,
     rng: np.random.Generator,
     concentration: float = 10.0,
 ) -> np.ndarray:
-    """Generate a synthetic memorization probe that outputs P(contaminated | x).
+    """Generate a synthetic memorization predictor that outputs P(contaminated | x).
 
     Simulates a continuous-valued contamination detector by drawing scores from
     Beta distributions whose means are separated to achieve a target AUROC.
@@ -301,13 +301,13 @@ def make_synthetic_memorization_probe(
 
     Args:
         true_labels: Binary array indicating contaminated (1) vs clean (0) items.
-        alpha: Target AUROC of the probe. 0.5 = random, 1.0 = perfect separation.
+        alpha: Target AUROC of the predictor. 0.5 = random, 1.0 = perfect separation.
         rng: NumPy random generator for reproducibility.
         concentration: Controls the tightness (inverse variance) of the Beta
             distributions. Higher values produce less noisy scores.
 
     Returns:
-        Array of probe scores in [0, 1], one per item.
+        Array of predictor scores in [0, 1], one per item.
     """
     mean_pos = _find_mean_for_auroc(alpha, concentration)
     EPS = 1e-6
@@ -323,14 +323,14 @@ def make_synthetic_memorization_probe(
     return rng.beta(a, b)
 
 
-def make_synthetic_correctness_probe(
+def make_synthetic_correctness_predictor(
     y_clean: np.ndarray,
     d: float,
     rng: np.random.Generator,
     concentration: float = 10.0,
     base_rate: float = 0.5,
 ) -> np.ndarray:
-    """Generate a synthetic correctness probe that outputs E[Y_clean | x].
+    """Generate a synthetic correctness predictor that outputs E[Y_clean | x].
 
     Simulates a continuous-valued predictor of clean accuracy by drawing scores
     from Beta distributions. Items answered correctly (y_clean=1) get scores
@@ -352,7 +352,7 @@ def make_synthetic_correctness_probe(
             0.25 for 4-way MCQ). Used as the uninformative prediction baseline.
 
     Returns:
-        Array of probe scores in [0, 1], one per item.
+        Array of predictor scores in [0, 1], one per item.
     """
     # Per-class Beta means: shift from base_rate toward the truth, proportional to d.
     # d=0 => both collapse to base_rate; d=1 => mean_correct=1, mean_incorrect=0.
@@ -495,8 +495,8 @@ def run_simulation(
     """Run simulation: sample test sets, apply estimators, compare to ground truth.
 
     Requires pool.d_hat and pool.c_hat to be set. Use
-    make_synthetic_memorization_probe / make_synthetic_correctness_probe
-    to generate synthetic probes, or attach real probe predictions.
+    make_synthetic_memorization_predictor / make_synthetic_correctness_predictor
+    to generate synthetic predictors, or attach real predictor predictions.
 
     Returns DataFrame with columns:
         replicate, estimator, estimate, ground_truth, error, squared_error

@@ -2,7 +2,7 @@
 
 For each benchmark/model/attack, loads the d_hat array (from run.py),
 runs Monte Carlo simulation under random and correlated contamination,
-and reports RMSE for the naive estimator and IPW with each MIA probe.
+and reports RMSE for the naive estimator and IPW with each MIA predictor.
 
 Outputs one table per benchmark. Benchmarks without confidence scores
 (e.g. PopQA) are skipped for correlated contamination.
@@ -25,7 +25,7 @@ from spiking.config import (
     BENCHMARKS,
     BENCHMARK_LABELS as BENCHMARK_LABELS_SHORT,
     DOSE_GROUPS,
-    MEM_PROBES as ALL_PROBES,
+    MEM_PREDICTORS as ALL_PREDICTORS,
     MODELS,
 )
 from hubble.results import load_sim_item_pool
@@ -90,7 +90,7 @@ def run_sim(pool, regime, dose_group, n, gamma, n_replicates, seed,
         ipw_accs.append(ipw_est)
         gt_accs.append(gt)
 
-        # Balanced accuracy of the d_hat probe.
+        # Balanced accuracy of the d_hat predictor.
         d_true = pool.duplicates[indices] > 0  # contamination label
         d_pred = ts.d_hat >= 0.5
         if len(np.unique(d_true)) < 2:
@@ -229,7 +229,7 @@ def main():
 
         d_hat_path = RESULTS_DIR / benchmark / f'd_hat_{args.model}.npz'
         d_hat_data = np.load(d_hat_path)
-        available_attacks = [a for a in ALL_PROBES if a in d_hat_data]
+        available_attacks = [a for a in ALL_PREDICTORS if a in d_hat_data]
 
         benchmark_rows = []
 

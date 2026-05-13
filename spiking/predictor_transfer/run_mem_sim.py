@@ -1,24 +1,24 @@
-"""Cross-benchmark memorization probe transfer simulation.
+"""Cross-benchmark memorization predictor transfer simulation.
 
 For each (source, target) benchmark pair:
-  - fit MIA probes on the source calibration split
+  - fit MIA predictors on the source calibration split
   - apply them to target simulation-split raw scores
   - run IPW simulation on the target pool with transferred d_hat
 
-This measures how well memorization probes transfer across benchmarks.
+This measures how well memorization predictors transfer across benchmarks.
 
-MIA probes: Platt scaling fitted on source cal scores, applied to target sim scores.
-Hidden-state probes: logistic regression fitted on source cal features, applied
+MIA predictors: Platt scaling fitted on source cal scores, applied to target sim scores.
+Hidden-state predictors: logistic regression fitted on source cal features, applied
 to target sim features.
 
 No GPU needed. Runs in minutes on CPU.
 
 Usage:
-  uv run python src/spiking/probe_transfer/run_mem_sim.py
-  uv run python src/spiking/probe_transfer/run_mem_sim.py --source mmlu
-  uv run python src/spiking/probe_transfer/run_mem_sim.py --source wikipedia
-  uv run python src/spiking/probe_transfer/run_mem_sim.py --corr-probe roberta
-  uv run python src/spiking/probe_transfer/run_mem_sim.py --labels perturbed
+  uv run python src/spiking/predictor_transfer/run_mem_sim.py
+  uv run python src/spiking/predictor_transfer/run_mem_sim.py --source mmlu
+  uv run python src/spiking/predictor_transfer/run_mem_sim.py --source wikipedia
+  uv run python src/spiking/predictor_transfer/run_mem_sim.py --corr-predictor roberta
+  uv run python src/spiking/predictor_transfer/run_mem_sim.py --labels perturbed
 """
 
 import argparse
@@ -33,11 +33,11 @@ from spiking.config import (
     BENCHMARK_LABELS,
     DOSE_GROUPS,
     MEM_LABELS,
-    MEM_PROBES,
+    MEM_PREDICTORS,
     MODELS,
 )
-from hubble.mem_probes import MIAProbe
-from hubble.probes import PROBES
+from hubble.mem_predictors import MIAPredictor
+from hubble.predictors import PREDICTORS
 from hubble.simulation import (
     DIFFICULTY_BINS,
     ItemPool,
@@ -58,7 +58,7 @@ EXP11_SCORES = DATA_RESULTS / 'all_scores.parquet'
 EXP12_FEATURES = DATA_RESULTS / 'features'
 EXP54_DIR = PAPER_DIR / 'correctness' / 'results'
 
-CORR_PROBES = {
+CORR_PREDICTORS = {
     'llama_platt': {
         'file_pattern': 'c_hat_llama_{model}.npz',
         'key': 'platt',
@@ -82,7 +82,7 @@ ALL_BENCHMARKS = list(BENCHMARK_LABELS.keys())
 def load_item_pool(benchmark, model):
     """Load the full ItemPool from release eval parquets.
 
-    Loss-based benchmarks only need duplicate labels for probe fitting, so they
+    Loss-based benchmarks only need duplicate labels for predictor fitting, so they
     get dummy outcomes here.
     """
     tag = f'hubble-{model}_toks'
@@ -187,12 +187,12 @@ def load_hidden_features(benchmark, model, pool_name):
     return features
 
 
-def load_c_hat(benchmark, model, labels_dir, corr_probe):
+def load_c_hat(benchmark, model, labels_dir, corr_predictor):
     """Load cached c_hat for a benchmark.
 
     Returns c_hat array (sim split) or None if not available.
     """
-    spec = CORR_PROBES[corr_probe]
+    spec = CORR_PREDICTORS[corr_predictor]
     filename = spec['file_pattern'].format(model=model)
     path = EXP54_DIR / labels_dir / benchmark / filename
     if not path.exists():
@@ -242,7 +242,7 @@ def run_sim(pool, regime, dose_group, n, gamma, n_replicates, seed,
 
 # Output formatting
 
-def format_transfer_table(results_df, mem_probe, regime,
+def format_transfer_table(results_df, mem_predictor, regime,
                           dose_group='high', difficulty_bin=None):
     """Format a source x target transfer matrix as a markdown table.
 
@@ -252,7 +252,7 @@ def format_transfer_table(results_df, mem_probe, regime,
     benchmarks = ALL_BENCHMARKS
     labels = [BENCHMARK_LABELS[b] for b in benchmarks]
 
-    title = f'#### IPW ({MEM_LABELS.get(mem_probe, mem_probe)}) — {regime}'
+    title = f'#### IPW ({MEM_LABELS.get(mem_predictor, mem_predictor)}) — {regime}'
     if regime == 'random':
         title += f' ({dose_group} dose)'
     else:
@@ -270,7 +270,7 @@ def format_transfer_table(results_df, mem_probe, regime,
             mask = (
                 (results_df['source'] == src_bm)
                 & (results_df['target'] == tgt_bm)
-                & (results_df['mem_probe'] == mem_probe)
+                & (results_df['mem_predictor'] == mem_predictor)
                 & (results_df['regime'] == regime)
             )
             if regime == 'random':
@@ -308,7 +308,7 @@ def format_transfer_table(results_df, mem_probe, regime,
     return '\n'.join(lines)
 
 
-def format_average_transfer_table(results_df, mem_probe):
+def format_average_transfer_table(results_df, mem_predictor):
     """Format a source x target transfer matrix averaged across all settings.
 
     Averages IPW RMSE across:
@@ -321,7 +321,7 @@ def format_average_transfer_table(results_df, mem_probe):
     benchmarks = ALL_BENCHMARKS
     labels = [BENCHMARK_LABELS[b] for b in benchmarks]
 
-    title = f'#### IPW ({MEM_LABELS.get(mem_probe, mem_probe)}) — average across all settings'
+    title = f'#### IPW ({MEM_LABELS.get(mem_predictor, mem_predictor)}) — average across all settings'
     lines = [title, '']
 
     header = '| Source \\\\ Target | ' + ' | '.join(labels) + ' |'
@@ -334,7 +334,7 @@ def format_average_transfer_table(results_df, mem_probe):
             subset = results_df[
                 (results_df['source'] == src_bm)
                 & (results_df['target'] == tgt_bm)
-                & (results_df['mem_probe'] == mem_probe)
+                & (results_df['mem_predictor'] == mem_predictor)
             ]
 
             if len(subset) == 0:
@@ -377,9 +377,9 @@ def main():
     parser.add_argument('--target', type=str, default=None,
                         choices=ALL_BENCHMARKS,
                         help='Single target benchmark (default: all)')
-    parser.add_argument('--corr-probe', type=str, default='llama_platt',
-                        choices=list(CORR_PROBES.keys()),
-                        help='Correctness probe for c_hat (default: llama_platt)')
+    parser.add_argument('--corr-predictor', type=str, default='llama_platt',
+                        choices=list(CORR_PREDICTORS.keys()),
+                        help='Correctness predictor for c_hat (default: llama_platt)')
     parser.add_argument('--labels', type=str, default='standard_labels',
                         choices=['standard_labels', 'perturbed'],
                         help='c_hat label directory (default: standard_labels)')
@@ -410,7 +410,7 @@ def main():
         print(f'  {bm}: {pool.n_items} items '
               f'(cal={len(cal_idx)}, sim={len(sim_idx)})')
 
-    print(f'\nLoading target pools and c_hat ({args.labels}, {args.corr_probe})...')
+    print(f'\nLoading target pools and c_hat ({args.labels}, {args.corr_predictor})...')
     target_pools = {}
     target_c_hats = {}
     for tgt in target_benchmarks:
@@ -419,9 +419,9 @@ def main():
             c_hat = np.zeros(sim_pool.n_items)
             print(f'  {tgt}: {sim_pool.n_items} items (loss-based, dummy c_hat)')
         else:
-            c_hat = load_c_hat(tgt, args.model, args.labels, args.corr_probe)
+            c_hat = load_c_hat(tgt, args.model, args.labels, args.corr_predictor)
             if c_hat is None:
-                print(f'  [SKIP] {tgt}: no {args.corr_probe} c_hat found')
+                print(f'  [SKIP] {tgt}: no {args.corr_predictor} c_hat found')
                 continue
             assert len(c_hat) == sim_pool.n_items, (
                 f'{tgt}: c_hat length {len(c_hat)} != sim pool size {sim_pool.n_items}')
@@ -433,14 +433,14 @@ def main():
     benchmark_features = {}
     for bm in all_needed:
         benchmark_features[bm] = {}
-        for probe_name, probe_cls in PROBES.items():
-            pool_name = probe_cls.pool.__name__
+        for predictor_name, predictor_cls in PREDICTORS.items():
+            pool_name = predictor_cls.pool.__name__
             try:
                 features = load_hidden_features(bm, args.model, pool_name)
-                benchmark_features[bm][probe_name] = features
-                print(f'  {bm}/{probe_name}: {features.shape}')
+                benchmark_features[bm][predictor_name] = features
+                print(f'  {bm}/{predictor_name}: {features.shape}')
             except FileNotFoundError:
-                print(f'  {bm}/{probe_name}: SKIPPED (no cached features)')
+                print(f'  {bm}/{predictor_name}: SKIPPED (no cached features)')
 
     all_rows = []
 
@@ -457,32 +457,32 @@ def main():
 
             d_hat_dict = {}
             for i, attack in enumerate(ATTACKS):
-                probe = MIAProbe(attack)
+                predictor = MIAPredictor(attack)
                 src_scores = src_data['scores'][:, i]
-                probe.fit(src_scores[src_data['cal_idx']], src_data['labels_cal'])
+                predictor.fit(src_scores[src_data['cal_idx']], src_data['labels_cal'])
                 tgt_scores = tgt_data['scores'][:, i]
-                d_hat_dict[attack] = probe.predict_proba(
+                d_hat_dict[attack] = predictor.predict_proba(
                     tgt_scores[tgt_data['sim_idx']])
 
-            for probe_name, probe_cls in PROBES.items():
-                if probe_name not in benchmark_features.get(src, {}):
+            for predictor_name, predictor_cls in PREDICTORS.items():
+                if predictor_name not in benchmark_features.get(src, {}):
                     continue
-                if probe_name not in benchmark_features.get(tgt, {}):
+                if predictor_name not in benchmark_features.get(tgt, {}):
                     continue
-                src_feats = benchmark_features[src][probe_name]
-                tgt_feats = benchmark_features[tgt][probe_name]
-                probe = probe_cls()
-                probe.fit(src_feats[src_data['cal_idx']], src_data['labels_cal'])
-                d_hat_dict[probe_name] = probe.predict_proba(
+                src_feats = benchmark_features[src][predictor_name]
+                tgt_feats = benchmark_features[tgt][predictor_name]
+                predictor = predictor_cls()
+                predictor.fit(src_feats[src_data['cal_idx']], src_data['labels_cal'])
+                d_hat_dict[predictor_name] = predictor.predict_proba(
                     tgt_feats[tgt_data['sim_idx']])
 
-            available_probes = [p for p in MEM_PROBES if p in d_hat_dict]
-            print(f'\n  {src} -> {tgt}: {len(available_probes)} probes')
+            available_predictors = [p for p in MEM_PREDICTORS if p in d_hat_dict]
+            print(f'\n  {src} -> {tgt}: {len(available_predictors)} predictors')
 
             if args.regime in ('random', 'both'):
                 for dose_group in DOSE_GROUPS:
-                    for mem_probe in available_probes:
-                        sim_pool.d_hat = d_hat_dict[mem_probe]
+                    for mem_predictor in available_predictors:
+                        sim_pool.d_hat = d_hat_dict[mem_predictor]
                         result = run_sim(
                             sim_pool, 'random', dose_group, args.n, args.gamma,
                             args.n_replicates, args.seed,
@@ -492,8 +492,8 @@ def main():
                             'model': args.model,
                             'regime': 'random', 'dose_group': dose_group,
                             'difficulty_bin': None,
-                            'mem_probe': mem_probe,
-                            'corr_probe': args.corr_probe,
+                            'mem_predictor': mem_predictor,
+                            'corr_predictor': args.corr_predictor,
                             **result,
                         })
                     print(f'    random/{dose_group}: done')
@@ -501,8 +501,8 @@ def main():
             has_confidence = sim_pool.confidence is not None
             if args.regime in ('correlated', 'both') and has_confidence:
                 for difficulty_bin in DIFFICULTY_BINS:
-                    for mem_probe in available_probes:
-                        sim_pool.d_hat = d_hat_dict[mem_probe]
+                    for mem_predictor in available_predictors:
+                        sim_pool.d_hat = d_hat_dict[mem_predictor]
                         result = run_sim(
                             sim_pool, 'correlated', 'high', args.n, args.gamma,
                             args.n_replicates, args.seed,
@@ -513,8 +513,8 @@ def main():
                             'model': args.model,
                             'regime': 'correlated', 'dose_group': 'high',
                             'difficulty_bin': difficulty_bin,
-                            'mem_probe': mem_probe,
-                            'corr_probe': args.corr_probe,
+                            'mem_predictor': mem_predictor,
+                            'corr_predictor': args.corr_predictor,
                             **result,
                         })
                     print(f'    correlated/{difficulty_bin}: done')
@@ -528,20 +528,20 @@ def main():
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     tables = []
 
-    for mem_probe in MEM_PROBES:
-        if mem_probe not in results_df['mem_probe'].values:
+    for mem_predictor in MEM_PREDICTORS:
+        if mem_predictor not in results_df['mem_predictor'].values:
             continue
         if args.regime in ('random', 'both'):
             for dose_group in DOSE_GROUPS:
                 tables.append(format_transfer_table(
-                    results_df, mem_probe, 'random', dose_group=dose_group))
+                    results_df, mem_predictor, 'random', dose_group=dose_group))
         if args.regime in ('correlated', 'both'):
             for difficulty_bin in DIFFICULTY_BINS:
                 tables.append(format_transfer_table(
-                    results_df, mem_probe, 'correlated',
+                    results_df, mem_predictor, 'correlated',
                     difficulty_bin=difficulty_bin))
 
-        tables.append(format_average_transfer_table(results_df, mem_probe))
+        tables.append(format_average_transfer_table(results_df, mem_predictor))
 
     full_output = '\n\n'.join(tables)
     table_path = FIGURES_DIR / 'transfer_tables.md'

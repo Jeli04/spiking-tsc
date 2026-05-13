@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 
 from hubble.data import BENCHMARK_LOADERS
-from hubble.probes import PROBES
+from hubble.predictors import PREDICTORS
 from hubble.runner import HUBBLE_MODELS, _model_label
 
 # Constants
@@ -61,19 +61,19 @@ def phase_extract(model_idx: int):
         texts = df['text'].tolist()
         print(f'  Loaded {len(texts)} texts')
 
-        for probe_name, probe_cls in PROBES.items():
-            probe = probe_cls()
-            pool_name = probe.pool.__name__
+        for predictor_name, predictor_cls in PREDICTORS.items():
+            predictor = predictor_cls()
+            pool_name = predictor.pool.__name__
             cache_path = _feature_path(benchmark, label, pool_name)
 
             if cache_path.exists():
-                print(f'  Cached: {probe_name} ({cache_path})')
+                print(f'  Cached: {predictor_name} ({cache_path})')
                 continue
 
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             tp = time.time()
-            probe.extract_features(model, tokenizer, texts, cache_path=cache_path)
-            print(f'  {probe_name}: {time.time() - tp:.1f}s')
+            predictor.extract_features(model, tokenizer, texts, cache_path=cache_path)
+            print(f'  {predictor_name}: {time.time() - tp:.1f}s')
 
         # Save metadata alongside features.
         meta_path = _meta_path(benchmark, label)
@@ -112,15 +112,15 @@ def phase_verify():
                 missing_meta.append(str(meta_path))
 
             # Feature files.
-            for probe_cls in PROBES.values():
-                pool_name = probe_cls.pool.__name__
+            for predictor_cls in PREDICTORS.values():
+                pool_name = predictor_cls.pool.__name__
                 feat_path = _feature_path(benchmark, label, pool_name)
                 if feat_path.exists():
                     total_features += 1
                 else:
                     missing_features.append(str(feat_path))
 
-    n_expected_features = len(PERTURBED_MODELS) * len(BENCHMARKS) * len(PROBES)
+    n_expected_features = len(PERTURBED_MODELS) * len(BENCHMARKS) * len(PREDICTORS)
     n_expected_meta = len(PERTURBED_MODELS) * len(BENCHMARKS)
 
     print(f'Feature files: {total_features}/{n_expected_features}')

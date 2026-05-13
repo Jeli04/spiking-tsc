@@ -154,12 +154,12 @@ def metrics_by_dose(
     return brier, auroc, bias
 
 
-def quality_row(benchmark, model, probe_name, brier, auroc, bias, n_cal, n_sim, **extra):
+def quality_row(benchmark, model, predictor_name, brier, auroc, bias, n_cal, n_sim, **extra):
     """Build a standard quality-results row used by several paper scripts."""
     row = {
         'benchmark': benchmark,
         'model': model,
-        'probe': probe_name,
+        'predictor': predictor_name,
         'brier_clean': brier['clean'],
         'brier_contaminated': brier['contaminated'],
         'brier_all': brier['all'],
@@ -185,10 +185,10 @@ def quality_row(benchmark, model, probe_name, brier, auroc, bias, n_cal, n_sim, 
     return row
 
 
-def print_metrics(probe_name, brier, auroc, bias):
-    """Print a compact one-line summary for a probe."""
+def print_metrics(predictor_name, brier, auroc, bias):
+    """Print a compact one-line summary for a predictor."""
     print(
-        f'  {probe_name:<20s}  '
+        f'  {predictor_name:<20s}  '
         f'brier: clean={brier["clean"]:.4f} contam={brier["contaminated"]:.4f} all={brier["all"]:.4f}  '
         f'auroc: clean={auroc["clean"]:.4f} contam={auroc["contaminated"]:.4f} all={auroc["all"]:.4f}  '
         f'bias: low={bias["low"]:.4f} mid={bias["mid"]:.4f} high={bias["high"]:.4f} all={bias["all"]:.4f}'

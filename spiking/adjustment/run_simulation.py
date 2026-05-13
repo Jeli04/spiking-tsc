@@ -24,10 +24,10 @@ from spiking.config import (
     BENCHMARKS,
     BENCHMARK_LABELS as BENCHMARK_LABELS_SHORT,
     CORR_LABELS,
-    CORR_PROBES_DEFAULT as CORR_PROBES,
+    CORR_PREDICTORS_DEFAULT as CORR_PREDICTORS,
     DOSE_GROUPS,
     MEM_LABELS,
-    MEM_PROBES,
+    MEM_PREDICTORS,
     MODELS,
 )
 from hubble.results import load_sim_item_pool
@@ -93,10 +93,10 @@ def run_sim(pool, regime, dose_group, n, gamma, n_replicates, seed,
     return result
 
 
-def format_benchmark_table(benchmark, results_df, has_correlated, mem_probe):
+def format_benchmark_table(benchmark, results_df, has_correlated, mem_predictor):
     """Format one benchmark's results as a markdown table.
 
-    Rows: Naive, IPW, then Imputation and Combined for each corr probe.
+    Rows: Naive, IPW, then Imputation and Combined for each corr predictor.
     Columns: Random (Low/Mid/High dose) and optionally Correlated (Easy/Medium/Hard).
     Values are RMSE × 100 (percentage points).
     """
@@ -109,7 +109,7 @@ def format_benchmark_table(benchmark, results_df, has_correlated, mem_probe):
     lines.append('| ' + ' | '.join(cols) + ' |')
     lines.append('|' + '|'.join(['---'] * len(cols)) + '|')
 
-    def lookup_rmse(estimator_col, corr_probe, regime, sub_key):
+    def lookup_rmse(estimator_col, corr_predictor, regime, sub_key):
         if regime == 'random':
             mask = (
                 (results_df['regime'] == 'random')
@@ -120,35 +120,35 @@ def format_benchmark_table(benchmark, results_df, has_correlated, mem_probe):
                 (results_df['regime'] == 'correlated')
                 & (results_df['difficulty_bin'] == sub_key)
             )
-        if corr_probe is not None:
-            mask = mask & (results_df['corr_probe'] == corr_probe)
+        if corr_predictor is not None:
+            mask = mask & (results_df['corr_predictor'] == corr_predictor)
         subset = results_df[mask]
         if len(subset) == 0:
             return '—'
         return f'{subset.iloc[0][estimator_col] * 100:.1f}'
 
-    def make_row(label, estimator_col, corr_probe=None):
+    def make_row(label, estimator_col, corr_predictor=None):
         cells = [label]
         for dg in ['low', 'mid', 'high']:
-            cells.append(lookup_rmse(estimator_col, corr_probe, 'random', dg))
+            cells.append(lookup_rmse(estimator_col, corr_predictor, 'random', dg))
         if has_correlated:
             for db in DIFFICULTY_BINS:
-                cells.append(lookup_rmse(estimator_col, corr_probe, 'correlated', db))
+                cells.append(lookup_rmse(estimator_col, corr_predictor, 'correlated', db))
         return '| ' + ' | '.join(cells) + ' |'
 
     lines.append(make_row('Naive', 'naive_rmse'))
-    lines.append(make_row(f'IPW ({MEM_LABELS[mem_probe]})', 'ipw_rmse'))
+    lines.append(make_row(f'IPW ({MEM_LABELS[mem_predictor]})', 'ipw_rmse'))
 
-    unique_corr = results_df['corr_probe'].unique()
-    for corr_probe in unique_corr:
+    unique_corr = results_df['corr_predictor'].unique()
+    for corr_predictor in unique_corr:
         lines.append(make_row(
-            f'Imputation ({CORR_LABELS.get(corr_probe, corr_probe)})',
-            'imputation_rmse', corr_probe))
+            f'Imputation ({CORR_LABELS.get(corr_predictor, corr_predictor)})',
+            'imputation_rmse', corr_predictor))
 
-    for corr_probe in unique_corr:
+    for corr_predictor in unique_corr:
         lines.append(make_row(
-            f'Combined ({CORR_LABELS.get(corr_probe, corr_probe)})',
-            'combined_rmse', corr_probe))
+            f'Combined ({CORR_LABELS.get(corr_predictor, corr_predictor)})',
+            'combined_rmse', corr_predictor))
 
     return '\n'.join(lines)
 
@@ -166,9 +166,9 @@ def main():
     parser.add_argument('--benchmark', type=str, default=None,
                         choices=list(BENCHMARKS),
                         help='Single benchmark (default: all)')
-    parser.add_argument('--mem-probe', type=str, default='min_k_plus_plus',
-                        choices=MEM_PROBES,
-                        help='Memorization probe for d_hat (default: min_k_plus_plus)')
+    parser.add_argument('--mem-predictor', type=str, default='min_k_plus_plus',
+                        choices=MEM_PREDICTORS,
+                        help='Memorization predictor for d_hat (default: min_k_plus_plus)')
     parser.add_argument('--labels', type=str, default='standard_labels',
                         choices=['standard_labels', 'perturbed_labels'],
                         help='Which c_hat label variant to use (default: standard_labels)')
@@ -198,10 +198,10 @@ def main():
             print(f'  [SKIP] No d_hat at {d_hat_path}')
             continue
         d_hat_data = np.load(d_hat_path)
-        if args.mem_probe not in d_hat_data:
-            print(f'  [SKIP] {args.mem_probe} not found in {d_hat_path}')
+        if args.mem_predictor not in d_hat_data:
+            print(f'  [SKIP] {args.mem_predictor} not found in {d_hat_path}')
             continue
-        sim_pool.d_hat = d_hat_data[args.mem_probe]
+        sim_pool.d_hat = d_hat_data[args.mem_predictor]
 
         # Load all cached c_hat files for this benchmark.
         c_hat_dir = EXP54_DIR / args.labels
@@ -221,14 +221,14 @@ def main():
             print(f'         Available keys: {list(c_hat_all.keys())}')
             continue
 
-        print(f'  d_hat: {args.mem_probe}, c_hat probes: {available_corr}')
+        print(f'  d_hat: {args.mem_predictor}, c_hat predictors: {available_corr}')
 
         benchmark_rows = []
 
-        # Random regime: dose groups x correctness probes.
+        # Random regime: dose groups x correctness predictors.
         for dose_group in DOSE_GROUPS:
-            for corr_probe in available_corr:
-                sim_pool.c_hat = c_hat_all[corr_probe]
+            for corr_predictor in available_corr:
+                sim_pool.c_hat = c_hat_all[corr_predictor]
                 result = run_sim(
                     sim_pool, 'random', dose_group, args.n, args.gamma,
                     args.n_replicates, args.seed,
@@ -237,22 +237,22 @@ def main():
                     'benchmark': benchmark, 'model': args.model,
                     'regime': 'random', 'dose_group': dose_group,
                     'difficulty_bin': None,
-                    'mem_probe': args.mem_probe, 'corr_probe': corr_probe,
+                    'mem_predictor': args.mem_predictor, 'corr_predictor': corr_predictor,
                     'n_replicates': args.n_replicates,
                     **result,
                 }
                 benchmark_rows.append(row)
-                print(f'      random / {dose_group:>4s} / {corr_probe:<14s}  '
+                print(f'      random / {dose_group:>4s} / {corr_predictor:<14s}  '
                       f'naive={result["naive_rmse"]*100:.1f}pp  '
                       f'ipw={result["ipw_rmse"]*100:.1f}pp  '
                       f'impute={result["imputation_rmse"]*100:.1f}pp  '
                       f'combined={result["combined_rmse"]*100:.1f}pp')
 
-        # Correlated regime: high dose x difficulty bins x correctness probes.
+        # Correlated regime: high dose x difficulty bins x correctness predictors.
         if has_confidence:
             for difficulty_bin in DIFFICULTY_BINS:
-                for corr_probe in available_corr:
-                    sim_pool.c_hat = c_hat_all[corr_probe]
+                for corr_predictor in available_corr:
+                    sim_pool.c_hat = c_hat_all[corr_predictor]
                     result = run_sim(
                         sim_pool, 'correlated', 'high', args.n, args.gamma,
                         args.n_replicates, args.seed,
@@ -262,12 +262,12 @@ def main():
                         'benchmark': benchmark, 'model': args.model,
                         'regime': 'correlated', 'dose_group': 'high',
                         'difficulty_bin': difficulty_bin,
-                        'mem_probe': args.mem_probe, 'corr_probe': corr_probe,
+                        'mem_predictor': args.mem_predictor, 'corr_predictor': corr_predictor,
                         'n_replicates': args.n_replicates,
                         **result,
                     }
                     benchmark_rows.append(row)
-                    print(f'  correlated / {difficulty_bin:>6s} / {corr_probe:<14s}  '
+                    print(f'  correlated / {difficulty_bin:>6s} / {corr_predictor:<14s}  '
                           f'naive={result["naive_rmse"]*100:.1f}pp  '
                           f'ipw={result["ipw_rmse"]*100:.1f}pp  '
                           f'impute={result["imputation_rmse"]*100:.1f}pp  '
@@ -276,12 +276,12 @@ def main():
         bm_df = pd.DataFrame(benchmark_rows)
         all_rows.extend(benchmark_rows)
         tables.append(format_benchmark_table(
-            benchmark, bm_df, has_confidence, args.mem_probe))
+            benchmark, bm_df, has_confidence, args.mem_predictor))
 
     # Keep output filenames tied to the run settings.
     bm_tag = args.benchmark if args.benchmark else 'all'
     labels_tag = args.labels.replace('_labels', '')
-    suffix = f'{bm_tag}_{args.model}_{args.mem_probe}_{labels_tag}_n{args.n}_g{args.gamma}_r{args.n_replicates}{qonly_suffix}'
+    suffix = f'{bm_tag}_{args.model}_{args.mem_predictor}_{labels_tag}_n{args.n}_g{args.gamma}_r{args.n_replicates}{qonly_suffix}'
 
     # Save combined results.
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)

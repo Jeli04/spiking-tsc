@@ -68,7 +68,7 @@ def create_appendix_figure(benchmarks, regime, col_keys, col_labels, save_path):
     for r, bench in enumerate(benchmarks):
         for c, key in enumerate(col_keys):
             path = RESULTS_DIR / bench / MODEL / \
-                f"probe_sweep_{regime}_{key}.parquet"
+                f"predictor_sweep_{regime}_{key}.parquet"
             df = pd.read_parquet(path)
 
             share_kw = {}

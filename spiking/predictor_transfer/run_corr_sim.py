@@ -1,13 +1,13 @@
-"""Cross-benchmark correctness probe transfer simulation.
+"""Cross-benchmark correctness predictor transfer simulation.
 
 For each (source, target) benchmark pair:
-  - fit correctness probes on the source calibration split
+  - fit correctness predictors on the source calibration split
   - apply them to target simulation-split raw scores
   - run the target simulation with transferred c_hat
 
-This measures how well correctness probes transfer across benchmarks.
+This measures how well correctness predictors transfer across benchmarks.
 
-Probes:
+Predictors:
   - llama_platt: Platt scaling on Llama-3.1-8B confidence
   - roberta: Platt scaling on cached raw RoBERTa correctness scores from
     correctness/run_roberta.py
@@ -15,9 +15,9 @@ Probes:
 No GPU needed. Runs in minutes on CPU.
 
 Usage:
-  uv run python src/spiking/probe_transfer/run_corr_sim.py
-  uv run python src/spiking/probe_transfer/run_corr_sim.py --source mmlu
-  uv run python src/spiking/probe_transfer/run_corr_sim.py --regime both
+  uv run python src/spiking/predictor_transfer/run_corr_sim.py
+  uv run python src/spiking/predictor_transfer/run_corr_sim.py --source mmlu
+  uv run python src/spiking/predictor_transfer/run_corr_sim.py --regime both
 """
 
 import argparse
@@ -33,7 +33,7 @@ from spiking.config import (
     DOSE_GROUPS,
     MODELS,
 )
-from hubble.corr_probes import LLMConfidenceProbe, RoBERTaCorrectnessProbe
+from hubble.corr_predictors import LLMConfidencePredictor, RoBERTaCorrectnessPredictor
 from hubble.results import (
     load_cached_confidence,
     load_cached_roberta_scores,
@@ -62,7 +62,7 @@ CORRECTNESS_CACHE_DIR = PAPER_DIR / 'correctness' / 'cache'
 
 EXTERNAL_MODEL = 'meta-llama/Llama-3.1-8B'
 
-CORR_PROBES = ['llama_platt', 'roberta']
+CORR_PREDICTORS = ['llama_platt', 'roberta']
 
 ALL_BENCHMARKS = list(BENCHMARKS)
 
@@ -74,13 +74,13 @@ def load_item_pool(benchmark, model):
     return load_eval_item_pool(EXP50_DIR, benchmark, model)
 
 
-def load_d_hat(benchmark, model, mem_probe):
+def load_d_hat(benchmark, model, mem_predictor):
     """Load cached d_hat for a benchmark."""
     path = EXP53_DIR / benchmark / f'd_hat_{model}.npz'
     data = np.load(path)
-    assert mem_probe in data, (
-        f'{mem_probe} not in {path} (available: {list(data.keys())})')
-    return data[mem_probe]
+    assert mem_predictor in data, (
+        f'{mem_predictor} not in {path} (available: {list(data.keys())})')
+    return data[mem_predictor]
 
 
 def load_llm_confidence(benchmark):
@@ -139,7 +139,7 @@ def run_sim(pool, regime, dose_group, n, gamma, n_replicates, seed,
 
 # Output formatting
 
-def format_transfer_table(results_df, corr_probe, estimator, regime,
+def format_transfer_table(results_df, corr_predictor, estimator, regime,
                           dose_group='high', difficulty_bin=None):
     """Format a source x target transfer matrix as a markdown table.
 
@@ -150,7 +150,7 @@ def format_transfer_table(results_df, corr_probe, estimator, regime,
     labels = [BENCHMARK_LABELS[b] for b in benchmarks]
 
     est_label = estimator.replace('_rmse', '').title()
-    title = f'#### {est_label} ({CORR_LABELS.get(corr_probe, corr_probe)}) — {regime}'
+    title = f'#### {est_label} ({CORR_LABELS.get(corr_predictor, corr_predictor)}) — {regime}'
     if regime == 'random':
         title += f' ({dose_group} dose)'
     else:
@@ -168,7 +168,7 @@ def format_transfer_table(results_df, corr_probe, estimator, regime,
             mask = (
                 (results_df['source'] == src_bm)
                 & (results_df['target'] == tgt_bm)
-                & (results_df['corr_probe'] == corr_probe)
+                & (results_df['corr_predictor'] == corr_predictor)
                 & (results_df['regime'] == regime)
             )
             if regime == 'random':
@@ -222,8 +222,8 @@ def main():
     parser.add_argument('--target', type=str, nargs='+', default=None,
                         choices=ALL_BENCHMARKS,
                         help='Target benchmark(s) (default: all)')
-    parser.add_argument('--mem-probe', type=str, default='min_k_plus_plus',
-                        help='Memorization probe for d_hat (default: min_k_plus_plus)')
+    parser.add_argument('--mem-predictor', type=str, default='min_k_plus_plus',
+                        help='Memorization predictor for d_hat (default: min_k_plus_plus)')
     parser.add_argument('--regime', type=str, default='random',
                         choices=['random', 'correlated', 'both'],
                         help='Contamination regime (default: random)')
@@ -263,20 +263,20 @@ def main():
             benchmark_data[bm]['roberta_scores'] = roberta_scores
 
         avail = [
-            p for p in CORR_PROBES
+            p for p in CORR_PREDICTORS
             if (p == 'llama_platt' and 'llm_conf' in benchmark_data[bm])
             or (p == 'roberta' and 'roberta_scores' in benchmark_data[bm])
         ]
         print(f'  {bm}: {pool.n_items} items '
-              f'(cal={len(cal_idx)}, sim={len(sim_idx)}, probes={avail})')
+              f'(cal={len(cal_idx)}, sim={len(sim_idx)}, predictors={avail})')
 
     # Load d_hat for target benchmarks.
-    print(f'\nLoading d_hat ({args.mem_probe})...')
+    print(f'\nLoading d_hat ({args.mem_predictor})...')
     for tgt in target_benchmarks:
         if tgt not in benchmark_data:
             continue
         sim_pool = benchmark_data[tgt]['sim_pool']
-        d_hat = load_d_hat(tgt, args.model, args.mem_probe)
+        d_hat = load_d_hat(tgt, args.model, args.mem_predictor)
         assert len(d_hat) == sim_pool.n_items, (
             f'{tgt}: d_hat length {len(d_hat)} != sim pool size {sim_pool.n_items}')
         benchmark_data[tgt]['d_hat'] = d_hat
@@ -301,22 +301,22 @@ def main():
 
             # Llama Platt on LLM confidence scores.
             if 'llm_conf' in src_data and 'llm_conf' in tgt_data:
-                probe = LLMConfidenceProbe(EXTERNAL_MODEL)
+                predictor = LLMConfidencePredictor(EXTERNAL_MODEL)
                 src_conf_cal = src_data['llm_conf'][src_data['cal_idx']][src_data['clean_cal_mask']]
-                probe.fit(src_conf_cal, src_data['labels_cal_clean'])
+                predictor.fit(src_conf_cal, src_data['labels_cal_clean'])
                 tgt_conf_sim = tgt_data['llm_conf'][tgt_data['sim_idx']]
-                c_hat_dict['llama_platt'] = probe.predict_proba(tgt_conf_sim)[:, 1]
+                c_hat_dict['llama_platt'] = predictor.predict_proba(tgt_conf_sim)[:, 1]
 
             if 'roberta_scores' in src_data and 'roberta_scores' in tgt_data:
-                probe = RoBERTaCorrectnessProbe(
+                predictor = RoBERTaCorrectnessPredictor(
                     model_dir=CORRECTNESS_CACHE_DIR / '_transfer_platt',
                 )
                 src_scores_cal = src_data['roberta_scores'][src_data['cal_idx']][src_data['clean_cal_mask']]
-                probe.fit(src_scores_cal, src_data['labels_cal_clean'])
+                predictor.fit(src_scores_cal, src_data['labels_cal_clean'])
                 tgt_scores_sim = tgt_data['roberta_scores'][tgt_data['sim_idx']]
-                c_hat_dict['roberta'] = probe.predict_proba(tgt_scores_sim)[:, 1]
+                c_hat_dict['roberta'] = predictor.predict_proba(tgt_scores_sim)[:, 1]
 
-            available_corr = [c for c in CORR_PROBES if c in c_hat_dict]
+            available_corr = [c for c in CORR_PREDICTORS if c in c_hat_dict]
             if not available_corr:
                 continue
 
@@ -325,8 +325,8 @@ def main():
             # Random regime.
             if args.regime in ('random', 'both'):
                 for dose_group in DOSE_GROUPS:
-                    for corr_probe in available_corr:
-                        sim_pool.c_hat = c_hat_dict[corr_probe]
+                    for corr_predictor in available_corr:
+                        sim_pool.c_hat = c_hat_dict[corr_predictor]
                         result = run_sim(
                             sim_pool, 'random', dose_group, args.n, args.gamma,
                             args.n_replicates, args.seed,
@@ -336,8 +336,8 @@ def main():
                             'model': args.model,
                             'regime': 'random', 'dose_group': dose_group,
                             'difficulty_bin': None,
-                            'mem_probe': args.mem_probe,
-                            'corr_probe': corr_probe,
+                            'mem_predictor': args.mem_predictor,
+                            'corr_predictor': corr_predictor,
                             **result,
                         })
                     print(f'    random/{dose_group}: done')
@@ -346,8 +346,8 @@ def main():
             has_confidence = sim_pool.confidence is not None
             if args.regime in ('correlated', 'both') and has_confidence:
                 for difficulty_bin in DIFFICULTY_BINS:
-                    for corr_probe in available_corr:
-                        sim_pool.c_hat = c_hat_dict[corr_probe]
+                    for corr_predictor in available_corr:
+                        sim_pool.c_hat = c_hat_dict[corr_predictor]
                         result = run_sim(
                             sim_pool, 'correlated', 'high', args.n, args.gamma,
                             args.n_replicates, args.seed,
@@ -358,8 +358,8 @@ def main():
                             'model': args.model,
                             'regime': 'correlated', 'dose_group': 'high',
                             'difficulty_bin': difficulty_bin,
-                            'mem_probe': args.mem_probe,
-                            'corr_probe': corr_probe,
+                            'mem_predictor': args.mem_predictor,
+                            'corr_predictor': corr_predictor,
                             **result,
                         })
                     print(f'    correlated/{difficulty_bin}: done')
@@ -375,19 +375,19 @@ def main():
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     tables = []
 
-    for corr_probe in CORR_PROBES:
-        if corr_probe not in results_df['corr_probe'].values:
+    for corr_predictor in CORR_PREDICTORS:
+        if corr_predictor not in results_df['corr_predictor'].values:
             continue
         for estimator in ['imputation_rmse', 'combined_rmse', 'ipw_rmse']:
             if args.regime in ('random', 'both'):
                 for dose_group in DOSE_GROUPS:
                     tables.append(format_transfer_table(
-                        results_df, corr_probe, estimator, 'random',
+                        results_df, corr_predictor, estimator, 'random',
                         dose_group=dose_group))
             if args.regime in ('correlated', 'both'):
                 for difficulty_bin in DIFFICULTY_BINS:
                     tables.append(format_transfer_table(
-                        results_df, corr_probe, estimator, 'correlated',
+                        results_df, corr_predictor, estimator, 'correlated',
                         difficulty_bin=difficulty_bin))
 
     full_output = '\n\n'.join(tables)

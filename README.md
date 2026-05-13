@@ -5,7 +5,7 @@ The literature on test set contamination has largely focused on detection, but s
 
 ## Overview
 
-This repository contains the experiment code for generating Hubble benchmark caches, fitting memorization and correctness probes, running adjustment simulations, and producing sample-efficiency / probe-transfer outputs.
+This repository contains the experiment code for generating Hubble benchmark caches, fitting memorization and correctness predictors, running adjustment simulations, and producing sample-efficiency / predictor-transfer outputs.
 
 
 ## Setup
@@ -50,7 +50,7 @@ uv run python spiking/main.py --stage memorization correctness adjustment
 
 ## Data Generation
 
-These scripts create the shared caches used by the downstream probes.
+These scripts create the shared caches used by the downstream predictors.
 
 Evaluate the Hubble models on all benchmarks:
 
@@ -77,14 +77,14 @@ uv run python spiking/data_generation/run_mia_scores.py combine \
   --model-filter 8b-500b
 ```
 
-Extract hidden-state features for memorization probes:
+Extract hidden-state features for memorization predictors:
 
 ```bash
 uv run python spiking/data_generation/run_hidden_states.py extract --model 3
 uv run python spiking/data_generation/run_hidden_states.py verify
 ```
 
-Extract external LLM confidence caches for correctness probes:
+Extract external LLM confidence caches for correctness predictors:
 
 ```bash
 uv run python spiking/data_generation/run_llm_confidence.py extract --external llama
@@ -96,9 +96,9 @@ uv run python spiking/data_generation/run_llm_confidence.py verify --external py
 uv run python spiking/data_generation/run_llm_confidence.py verify --external qwen --size 8b
 ```
 
-## Memorization Probes
+## Memorization Predictors
 
-Fit memorization probes from the generated MIA score and feature caches:
+Fit memorization predictors from the generated MIA score and feature caches:
 
 ```bash
 uv run python spiking/memorization/run.py
@@ -124,12 +124,12 @@ uv run python spiking/memorization/run_simulation.py \
   --n-replicates 100
 ```
 
-## Correctness / Correction Probes
+## Correctness / Correction Predictors
 
-The correctness probes produce `c_hat` predictions. RoBERTa requires training
+The correctness predictors produce `c_hat` predictions. RoBERTa requires training
 and should be run on a GPU.
 
-Train RoBERTa correctness probes:
+Train RoBERTa correctness predictors:
 
 ```bash
 uv run python spiking/correctness/run_roberta.py \
@@ -147,7 +147,7 @@ uv run python spiking/correctness/run_roberta.py \
   --question-only
 ```
 
-Generate Platt-scaled external LLM correctness probes from the confidence
+Generate Platt-scaled external LLM correctness predictors from the confidence
 caches:
 
 ```bash
@@ -156,7 +156,7 @@ uv run python spiking/correctness/run_external_llm.py --external pythia --size 6
 uv run python spiking/correctness/run_external_llm.py --external qwen --size 8b
 ```
 
-Evaluate cached correctness probes together:
+Evaluate cached correctness predictors together:
 
 ```bash
 uv run python spiking/correctness/run_evals.py \
@@ -176,7 +176,7 @@ uv run python spiking/correctness/run_simulation.py \
 ## Adjustment Simulation
 
 The adjustment simulation combines memorization `d_hat` and correctness `c_hat`
-outputs. Run memorization and correctness probes first.
+outputs. Run memorization and correctness predictors first.
 
 ```bash
 uv run python spiking/adjustment/run_simulation.py
@@ -220,27 +220,27 @@ uv run python spiking/sample_efficiency/plot.py \
   --benchmarks winogrande_mcq mmlu popqa
 ```
 
-## Probe Transfer
+## Predictor Transfer
 
-Probe transfer experiments reuse the generated `d_hat`, `c_hat`, MIA score, and
+Predictor transfer experiments reuse the generated `d_hat`, `c_hat`, MIA score, and
 hidden-state caches.
 
-Run memorization-probe transfer:
+Run memorization-predictor transfer:
 
 ```bash
-uv run python spiking/probe_transfer/run_mem_sim.py --regime both
+uv run python spiking/predictor_transfer/run_mem_sim.py --regime both
 ```
 
-Run correctness-probe transfer:
+Run correctness-predictor transfer:
 
 ```bash
-uv run python spiking/probe_transfer/run_corr_sim.py --regime both
+uv run python spiking/predictor_transfer/run_corr_sim.py --regime both
 ```
 
 Visualize memorization transfer:
 
 ```bash
-uv run python spiking/probe_transfer/visualize.py \
+uv run python spiking/predictor_transfer/visualize.py \
   --mode mem \
   --dose-group all
 ```
@@ -248,7 +248,7 @@ uv run python spiking/probe_transfer/visualize.py \
 Visualize correctness transfer:
 
 ```bash
-uv run python spiking/probe_transfer/visualize.py \
+uv run python spiking/predictor_transfer/visualize.py \
   --mode corr \
   --dose-group all
 ```
@@ -256,13 +256,13 @@ uv run python spiking/probe_transfer/visualize.py \
 For quicker debugging, restrict transfer runs to one source and target:
 
 ```bash
-uv run python spiking/probe_transfer/run_mem_sim.py \
+uv run python spiking/predictor_transfer/run_mem_sim.py \
   --source mmlu \
   --target piqa \
   --regime random \
   --n-replicates 100
 
-uv run python spiking/probe_transfer/run_corr_sim.py \
+uv run python spiking/predictor_transfer/run_corr_sim.py \
   --source mmlu \
   --target piqa \
   --regime random \

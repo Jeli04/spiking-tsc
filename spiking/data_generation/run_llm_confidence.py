@@ -38,13 +38,13 @@ from pathlib import Path
 
 from spiking.config import EXTERNAL_MODELS
 from hubble.data import BENCHMARK_LOADERS
-from hubble.corr_probes import LLMConfidenceProbe
+from hubble.corr_predictors import LLMConfidencePredictor
 
 # Constants
 
 RESULTS_DIR = Path(__file__).parent / 'results'
 CONFIDENCE_DIR = RESULTS_DIR / 'confidence'
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 LOCAL_MODELS_DIR = PROJECT_ROOT / 'models'
 
 # BENCHMARK_LOADERS uses the raw Hubble cache keys.
@@ -99,7 +99,7 @@ def phase_extract(
     model_id, label = _resolve_external(external, size)
     benchmarks = benchmarks or BENCHMARKS
 
-    probe = LLMConfidenceProbe(model_id)
+    predictor = LLMConfidencePredictor(model_id)
     print(f'Extracting confidence: backend={external} model={label}')
 
     load_path = _resolve_model_path(model_id, local_models)
@@ -114,7 +114,7 @@ def phase_extract(
         cache_path = _confidence_path(benchmark, label)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
 
-        conf = probe.extract_confidence(
+        conf = predictor.extract_confidence(
             model, tokenizer, df, benchmark, cache_path=cache_path,
         )
 

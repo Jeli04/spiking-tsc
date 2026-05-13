@@ -1,13 +1,13 @@
 """Run the paper experiments in submission order.
 
 This release entry point runs the section scripts in paper order and mirrors
-figure/table outputs into ``src/spiking/results/``.
+figure/table outputs into ``spiking/results/``.
 
 Usage:
-  uv run python src/spiking/main.py
-  uv run python src/spiking/main.py --stage simulation correctness
-  uv run python src/spiking/main.py --scope main --skip-gpu
-  uv run python src/spiking/main.py --dry-run
+  uv run python spiking/main.py
+  uv run python spiking/main.py --stage simulation correctness
+  uv run python spiking/main.py --scope main --skip-gpu
+  uv run python spiking/main.py --dry-run
 """
 
 from __future__ import annotations
@@ -244,14 +244,14 @@ class PipelineRunner:
         self._run_script(
             stage='shared_inputs',
             name='eval_standard_8b_500b',
-            script_rel='src/paper/data_generation/run_evals.py',
+            script_rel='spiking/data_generation/run_evals.py',
             gpu=True,
             extra_env={'SLURM_ARRAY_TASK_ID': RUN_EVAL_TASK_IDS[0]},
         )
         self._run_script(
             stage='shared_inputs',
             name='eval_perturbed_8b_500b',
-            script_rel='src/paper/data_generation/run_evals.py',
+            script_rel='spiking/data_generation/run_evals.py',
             gpu=True,
             extra_env={'SLURM_ARRAY_TASK_ID': RUN_EVAL_TASK_IDS[1]},
         )
@@ -260,21 +260,21 @@ class PipelineRunner:
             self._run_script(
                 stage='shared_inputs',
                 name=f'mia_scores_{attack}',
-                script_rel='src/paper/data_generation/run_mia_scores.py',
+                script_rel='spiking/data_generation/run_mia_scores.py',
                 script_args=['score', '--attack', attack, '--model', PERTURBED_MODEL_INDEX],
                 gpu=True,
             )
         self._run_script(
             stage='shared_inputs',
             name='mia_scores_combine',
-            script_rel='src/paper/data_generation/run_mia_scores.py',
+            script_rel='spiking/data_generation/run_mia_scores.py',
             script_args=['combine', '--model-filter', '8b-500b'],
         )
 
         self._run_script(
             stage='shared_inputs',
             name='hidden_state_features',
-            script_rel='src/paper/data_generation/run_hidden_states.py',
+            script_rel='spiking/data_generation/run_hidden_states.py',
             script_args=['extract', '--model', PERTURBED_MODEL_INDEX],
             gpu=True,
         )
@@ -282,21 +282,21 @@ class PipelineRunner:
         self._run_script(
             stage='shared_inputs',
             name='llama_confidence_cache',
-            script_rel='src/paper/data_generation/run_llm_confidence.py',
+            script_rel='spiking/data_generation/run_llm_confidence.py',
             script_args=['extract', '--external', 'llama'],
             gpu=True,
         )
         self._run_script(
             stage='shared_inputs',
             name='pythia_6_9b_confidence_cache',
-            script_rel='src/paper/data_generation/run_llm_confidence.py',
+            script_rel='spiking/data_generation/run_llm_confidence.py',
             script_args=['extract', '--external', 'pythia', '--size', '6.9b'],
             gpu=True,
         )
         self._run_script(
             stage='shared_inputs',
             name='qwen_8b_confidence_cache',
-            script_rel='src/paper/data_generation/run_llm_confidence.py',
+            script_rel='spiking/data_generation/run_llm_confidence.py',
             script_args=['extract', '--external', 'qwen', '--size', '8b'],
             gpu=True,
         )
@@ -308,7 +308,7 @@ class PipelineRunner:
             self._run_script(
                 stage='simulation',
                 name=f'phase_diagram_{benchmark}',
-                script_rel='src/paper/simulation/run.py',
+                script_rel='spiking/simulation/run.py',
                 script_args=['--benchmark', benchmark],
             )
 
@@ -316,7 +316,7 @@ class PipelineRunner:
             self._run_script(
                 stage='simulation',
                 name='simulation_appendix',
-                script_rel='src/paper/simulation/create_appendix.py',
+                script_rel='spiking/simulation/create_appendix.py',
             )
 
         self._sync_stage_outputs('simulation/figures')
@@ -324,15 +324,15 @@ class PipelineRunner:
     def _run_memorization(self) -> None:
         self._run_script(
             stage='memorization',
-            name='memorization_probe_benchmark',
-            script_rel='src/paper/memorization/run.py',
+            name='memorization_predictor_benchmark',
+            script_rel='spiking/memorization/run.py',
         )
 
         if self.args.scope == 'full':
             self._run_script(
                 stage='memorization',
-                name='memorization_probe_simulation',
-                script_rel='src/paper/memorization/run_simulation.py',
+                name='memorization_predictor_simulation',
+                script_rel='spiking/memorization/run_simulation.py',
             )
 
         self._sync_stage_outputs('memorization/figures')
@@ -342,7 +342,7 @@ class PipelineRunner:
             self._run_script(
                 stage='correctness',
                 name=f'roberta_question_only_{benchmark}',
-                script_rel='src/paper/correctness/run_roberta.py',
+                script_rel='spiking/correctness/run_roberta.py',
                 script_args=[
                     '--benchmark', benchmark,
                     '--question-only',
@@ -354,26 +354,26 @@ class PipelineRunner:
 
         self._run_script(
             stage='correctness',
-            name='llama_correctness_probe',
-            script_rel='src/paper/correctness/run_external_llm.py',
+            name='llama_correctness_predictor',
+            script_rel='spiking/correctness/run_external_llm.py',
             script_args=['--external', 'llama'],
         )
         self._run_script(
             stage='correctness',
-            name='pythia_6_9b_correctness_probe',
-            script_rel='src/paper/correctness/run_external_llm.py',
+            name='pythia_6_9b_correctness_predictor',
+            script_rel='spiking/correctness/run_external_llm.py',
             script_args=['--external', 'pythia', '--size', '6.9b'],
         )
         self._run_script(
             stage='correctness',
-            name='qwen_8b_correctness_probe',
-            script_rel='src/paper/correctness/run_external_llm.py',
+            name='qwen_8b_correctness_predictor',
+            script_rel='spiking/correctness/run_external_llm.py',
             script_args=['--external', 'qwen', '--size', '8b'],
         )
         self._run_script(
             stage='correctness',
-            name='correctness_probe_eval_table',
-            script_rel='src/paper/correctness/run_evals.py',
+            name='correctness_predictor_eval_table',
+            script_rel='spiking/correctness/run_evals.py',
             script_args=['--pythia-size', '6.9b', '--qwen-size', '8b', '--question-only'],
         )
 
@@ -383,7 +383,7 @@ class PipelineRunner:
         self._run_script(
             stage='adjustment',
             name='adjustment_simulation',
-            script_rel='src/paper/adjustment/run_simulation.py',
+            script_rel='spiking/adjustment/run_simulation.py',
         )
 
         if self.args.scope == 'full':
@@ -391,7 +391,7 @@ class PipelineRunner:
             self._run_script(
                 stage='adjustment',
                 name='adjustment_calibration_plot',
-                script_rel='src/paper/adjustment/plot_calibration.py',
+                script_rel='spiking/adjustment/plot_calibration.py',
                 script_args=['--suffix', suffix],
             )
 
@@ -403,13 +403,13 @@ class PipelineRunner:
         self._run_script(
             stage='practical',
             name='sample_efficiency_plot',
-            script_rel='src/paper/sample_efficiency/plot.py',
+            script_rel='spiking/sample_efficiency/plot.py',
         )
 
         self._run_script(
             stage='practical',
             name='memorization_transfer_simulation',
-            script_rel='src/paper/probe_transfer/run_mem_sim.py',
+            script_rel='spiking/predictor_transfer/run_mem_sim.py',
         )
 
         visualize_args = ['--mode', 'mem', '--dose-group', 'all']
@@ -418,11 +418,11 @@ class PipelineRunner:
         self._run_script(
             stage='practical',
             name='memorization_transfer_visualization',
-            script_rel='src/paper/probe_transfer/visualize.py',
+            script_rel='spiking/predictor_transfer/visualize.py',
             script_args=visualize_args,
         )
 
-        self._sync_stage_outputs('sample_efficiency/figures', 'probe_transfer/figures')
+        self._sync_stage_outputs('sample_efficiency/figures', 'predictor_transfer/figures')
 
 
 def parse_args() -> argparse.Namespace:

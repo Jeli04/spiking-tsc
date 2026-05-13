@@ -1,6 +1,6 @@
-"""Evaluate cached correctness probes together.
+"""Evaluate cached correctness predictors together.
 
-Loads cached RoBERTa/external-LLM scores, fits Platt-scaled probes where
+Loads cached RoBERTa/external-LLM scores, fits Platt-scaled predictors where
 needed, and reports Brier, AUROC, balanced accuracy, bias, and variance.
 
 No GPU needed.
@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 from spiking.config import BENCHMARKS, MODELS
-from hubble.corr_probes import CORRECTNESS_PROBES, LLMConfidenceProbe
+from hubble.corr_predictors import CORRECTNESS_PREDICTORS, LLMConfidencePredictor
 from hubble.metrics import metrics_by_dose
 from hubble.results import (
     load_cached_confidence,
@@ -26,12 +26,20 @@ from hubble.results import (
 )
 from hubble.simulation import stratified_split
 
-from _reporting import (
-    format_bias_latex_table,
-    format_quality_table,
-    metrics_to_row as _metrics_to_row,
-    print_full_metrics as _print_metrics,
-)
+try:
+    from ._reporting import (
+        format_bias_latex_table,
+        format_quality_table,
+        metrics_to_row as _metrics_to_row,
+        print_full_metrics as _print_metrics,
+    )
+except ImportError:
+    from _reporting import (
+        format_bias_latex_table,
+        format_quality_table,
+        metrics_to_row as _metrics_to_row,
+        print_full_metrics as _print_metrics,
+    )
 
 RESULTS_DIR = Path(__file__).parent / 'results'
 CACHE_DIR = Path(__file__).parent / 'cache'
@@ -46,7 +54,7 @@ DATA_RESULTS = Path(__file__).resolve().parent.parent / 'data_generation' / 'res
 def main():
     import argparse
     parser = argparse.ArgumentParser(
-        description='Re-evaluate all correctness probes (Llama Platt + RoBERTa) together.')
+        description='Re-evaluate all correctness predictors (Llama Platt + RoBERTa) together.')
     parser.add_argument('--model', type=str, default='8b-500b')
     parser.add_argument('--benchmark', type=str, default=None,
                         choices=BENCHMARKS,
@@ -54,9 +62,9 @@ def main():
     parser.add_argument('--perturbed-labels', action='store_true',
                         help='Use perturbed model accuracy as y_clean instead of standard model')
     parser.add_argument('--pythia-size', type=str, default=None,
-                        help='Include Pythia+Platt probe from this Pythia size (e.g. 1.4b, 6.9b)')
+                        help='Include Pythia+Platt predictor from this Pythia size (e.g. 1.4b, 6.9b)')
     parser.add_argument('--qwen-size', type=str, default=None,
-                        help='Include Qwen+Platt probe from this Qwen size (e.g. 8b)')
+                        help='Include Qwen+Platt predictor from this Qwen size (e.g. 8b)')
     parser.add_argument('--question-only', action='store_true',
                         help='Load question-only RoBERTa scores (from run_roberta.py --question-only)')
     args = parser.parse_args()
@@ -90,21 +98,21 @@ def main():
             labels_cal_clean = cal_pool.y_clean[clean_cal_mask]
             labels_sim = sim_pool.y_clean
 
-            # Llama probes (Platt on perturbed confidence)
+            # Llama predictors (Platt on perturbed confidence)
             if pool.confidence is None:
-                print(f'  [SKIP] No perturbed confidence for {benchmark}, skipping Llama probes')
+                print(f'  [SKIP] No perturbed confidence for {benchmark}, skipping Llama predictors')
             else:
                 cal_df_clean = pd.DataFrame({
                     'confidence': pool.confidence[cal_idx][clean_cal_mask]})
                 sim_df = pd.DataFrame({'confidence': pool.confidence[sim_idx]})
 
-                print(f'  Fitting Llama probes on {clean_cal_mask.sum()} clean cal items '
+                print(f'  Fitting Llama predictors on {clean_cal_mask.sum()} clean cal items '
                       f'(of {len(cal_idx)} total)')
 
-                for probe_name, probe_cls in CORRECTNESS_PROBES.items():
-                    probe = probe_cls()
-                    probe.fit(cal_df_clean, labels_cal_clean)
-                    c_hat_sim = probe.predict_proba(sim_df)[:, 1]
+                for predictor_name, predictor_cls in CORRECTNESS_PREDICTORS.items():
+                    predictor = predictor_cls()
+                    predictor.fit(cal_df_clean, labels_cal_clean)
+                    c_hat_sim = predictor.predict_proba(sim_df)[:, 1]
 
                     brier, auroc, bal_acc, bias, variance = metrics_by_dose(
                         c_hat_sim,
@@ -116,12 +124,12 @@ def main():
                     )
                     quality_rows.append({
                         'benchmark': benchmark, 'model': model,
-                        'probe': f'llama_{probe_name}',
+                        'predictor': f'llama_{predictor_name}',
                         **_metrics_to_row(brier, auroc, bal_acc, bias, variance, len(cal_idx), len(sim_idx)),
                     })
-                    _print_metrics(f'llama_{probe_name}', brier, auroc, bal_acc, bias, variance)
+                    _print_metrics(f'llama_{predictor_name}', brier, auroc, bal_acc, bias, variance)
 
-            # RoBERTa probes from cached scores.
+            # RoBERTa predictors from cached scores.
             roberta_scores = load_cached_roberta_scores(
                 CACHE_DIR,
                 benchmark,
@@ -145,13 +153,13 @@ def main():
                     include_balanced_accuracy=True,
                     include_variance=True,
                 )
-                roberta_probe_name = f'roberta{qonly_suffix}'
+                roberta_predictor_name = f'roberta{qonly_suffix}'
                 quality_rows.append({
                     'benchmark': benchmark, 'model': model,
-                    'probe': roberta_probe_name,
+                    'predictor': roberta_predictor_name,
                     **_metrics_to_row(brier, auroc, bal_acc, bias, variance, len(cal_idx), len(sim_idx)),
                 })
-                _print_metrics(roberta_probe_name, brier, auroc, bal_acc, bias, variance)
+                _print_metrics(roberta_predictor_name, brier, auroc, bal_acc, bias, variance)
 
             # Pythia + Platt from cached confidence.
             if args.pythia_size:
@@ -170,9 +178,9 @@ def main():
                     cal_conf = pythia_conf[cal_idx][clean_cal_mask]
                     sim_conf = pythia_conf[sim_idx]
 
-                    probe = LLMConfidenceProbe(f'EleutherAI/{pythia_label}')
-                    probe.fit(cal_conf, labels_cal_clean)
-                    c_hat_platt = probe.predict_proba(sim_conf)[:, 1]
+                    predictor = LLMConfidencePredictor(f'EleutherAI/{pythia_label}')
+                    predictor.fit(cal_conf, labels_cal_clean)
+                    c_hat_platt = predictor.predict_proba(sim_conf)[:, 1]
 
                     brier, auroc, bal_acc, bias, variance = metrics_by_dose(
                         c_hat_platt,
@@ -184,7 +192,7 @@ def main():
                     )
                     quality_rows.append({
                         'benchmark': benchmark, 'model': model,
-                        'probe': f'pythia_platt_{args.pythia_size}',
+                        'predictor': f'pythia_platt_{args.pythia_size}',
                         **_metrics_to_row(brier, auroc, bal_acc, bias, variance, len(cal_idx), len(sim_idx)),
                     })
                     _print_metrics(f'pythia_platt_{args.pythia_size}', brier, auroc, bal_acc, bias, variance)
@@ -206,9 +214,9 @@ def main():
                     cal_conf = qwen_conf[cal_idx][clean_cal_mask]
                     sim_conf = qwen_conf[sim_idx]
 
-                    probe = LLMConfidenceProbe(f'Qwen/{qwen_label}')
-                    probe.fit(cal_conf, labels_cal_clean)
-                    c_hat_platt = probe.predict_proba(sim_conf)[:, 1]
+                    predictor = LLMConfidencePredictor(f'Qwen/{qwen_label}')
+                    predictor.fit(cal_conf, labels_cal_clean)
+                    c_hat_platt = predictor.predict_proba(sim_conf)[:, 1]
 
                     brier, auroc, bal_acc, bias, variance = metrics_by_dose(
                         c_hat_platt,
@@ -220,7 +228,7 @@ def main():
                     )
                     quality_rows.append({
                         'benchmark': benchmark, 'model': model,
-                        'probe': f'qwen_platt_{args.qwen_size}',
+                        'predictor': f'qwen_platt_{args.qwen_size}',
                         **_metrics_to_row(brier, auroc, bal_acc, bias, variance, len(cal_idx), len(sim_idx)),
                     })
                     _print_metrics(f'qwen_platt_{args.qwen_size}', brier, auroc, bal_acc, bias, variance)

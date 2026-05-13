@@ -1,8 +1,8 @@
 """Generate c_hat predictions with an external LLM.
 
-Fits two probes per (benchmark, model) pair:
-  - ConfidenceProbe ("platt"): Platt scaling on the perturbed model's own confidence.
-  - LLMConfidenceProbe ("<external>_platt"): Platt scaling on an external LLM's
+Fits two predictors per (benchmark, model) pair:
+  - ConfidencePredictor ("platt"): Platt scaling on the perturbed model's own confidence.
+  - LLMConfidencePredictor ("<external>_platt"): Platt scaling on an external LLM's
     confidence (llama / pythia / qwen).
 
 External confidence comes from the shared confidence cache. Run extraction
@@ -35,12 +35,15 @@ import numpy as np
 import pandas as pd
 
 from spiking.config import BENCHMARKS, EXTERNAL_MODELS, MODELS
-from hubble.corr_probes import ConfidenceProbe, LLMConfidenceProbe
+from hubble.corr_predictors import ConfidencePredictor, LLMConfidencePredictor
 from hubble.metrics import metrics_by_dose
 from hubble.results import load_cached_confidence, load_eval_item_pool
 from hubble.simulation import stratified_split
 
-from _reporting import format_quality_table, metrics_to_row, print_full_metrics
+try:
+    from ._reporting import format_quality_table, metrics_to_row, print_full_metrics
+except ImportError:
+    from _reporting import format_quality_table, metrics_to_row, print_full_metrics
 
 BASE_DIR = Path(__file__).parent
 DATA_RESULTS = Path(__file__).resolve().parent.parent / 'data_generation' / 'results'
@@ -87,7 +90,7 @@ def main():
 
     model_id = cfg['model_id'](size)
     label = model_id.split('/')[-1]
-    probe_name = cfg['probe_name']
+    predictor_name = cfg['predictor_name']
 
     results_dir, figures_dir = _output_dirs(args.perturbed_labels)
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -120,11 +123,11 @@ def main():
 
             c_hat_dict = {}
 
-            def _run_probe(name, probe, cal_conf_clean, sim_conf):
+            def _run_predictor(name, predictor, cal_conf_clean, sim_conf):
                 cal_df = pd.DataFrame({'confidence': cal_conf_clean})
                 sim_df = pd.DataFrame({'confidence': sim_conf})
-                probe.fit(cal_df, labels_cal_clean)
-                c_hat_sim = probe.predict_proba(sim_df)[:, 1]
+                predictor.fit(cal_df, labels_cal_clean)
+                c_hat_sim = predictor.predict_proba(sim_df)[:, 1]
                 c_hat_dict[name] = c_hat_sim
 
                 brier, auroc, bal_acc, bias, variance = metrics_by_dose(
@@ -139,21 +142,21 @@ def main():
                 quality_rows.append({
                     'benchmark': benchmark,
                     'model': model,
-                    'probe': name,
+                    'predictor': name,
                     **metrics_to_row(brier, auroc, bal_acc, bias, variance, len(cal_idx), len(sim_idx)),
                     **extra,
                 })
                 print_full_metrics(name, brier, auroc, bal_acc, bias, variance)
 
             # Perturbed model confidence.
-            _run_probe('platt', ConfidenceProbe(),
+            _run_predictor('platt', ConfidencePredictor(),
                        pool.confidence[cal_idx][clean_cal_mask],
                        pool.confidence[sim_idx])
 
             # External LLM confidence.
             ext_conf = _load_external_confidence(benchmark, label)
             if ext_conf is not None:
-                _run_probe(probe_name, LLMConfidenceProbe(model_id),
+                _run_predictor(predictor_name, LLMConfidencePredictor(model_id),
                            ext_conf[cal_idx][clean_cal_mask],
                            ext_conf[sim_idx])
 
@@ -169,10 +172,10 @@ def main():
     # Save quality table.
     quality_df = pd.DataFrame(quality_rows)
     if cfg['quality_suffix']:
-        q_stem = f'probe_quality_{cfg["quality_suffix"]}_{label}'
+        q_stem = f'predictor_quality_{cfg["quality_suffix"]}_{label}'
         md_stem = f'brier_table_{cfg["quality_suffix"]}_{label}'
     else:
-        q_stem = 'probe_quality'
+        q_stem = 'predictor_quality'
         md_stem = 'brier_table'
 
     quality_df.to_csv(results_dir / f'{q_stem}.csv', index=False)

@@ -11,7 +11,7 @@ from mia.attacks import (
     zlib,
 )
 from mia.logprobs import get_full_logprobs, get_sequence_logprob, get_token_logprobs
-from mia.probes import AttackProbe, LogprobCorrectProbe, PrecomputedProbe
+from mia.predictors import AttackPredictor, LogprobCorrectPredictor, PrecomputedPredictor
 
 __all__ = [
     # logprobs
@@ -27,8 +27,8 @@ __all__ = [
     "gradnorm",
     "ATTACKS",
     "SIMPLE_ATTACKS",
-    # probes
-    "AttackProbe",
-    "PrecomputedProbe",
-    "LogprobCorrectProbe",
+    # predictors
+    "AttackPredictor",
+    "PrecomputedPredictor",
+    "LogprobCorrectPredictor",
 ]

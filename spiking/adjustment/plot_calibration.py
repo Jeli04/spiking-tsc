@@ -55,10 +55,10 @@ def lookup_val(df, col, regime, key_col, key_val):
     return subset.iloc[0][col]
 
 
-def plot_calibration(results_df, corr_probe, suffix):
+def plot_calibration(results_df, corr_predictor, suffix):
     """Create the combined calibration figure."""
-    # Use one correctness probe for the whole figure.
-    df = results_df[results_df['corr_probe'] == corr_probe].copy()
+    # Use one correctness predictor for the whole figure.
+    df = results_df[results_df['corr_predictor'] == corr_predictor].copy()
 
     benchmarks = [b for b in BENCHMARK_LABELS if b in df['benchmark'].unique()]
     n_benchmarks = len(benchmarks)
@@ -160,8 +160,8 @@ def main():
     parser.add_argument('--suffix', type=str,
                         default='all_8b-500b_min_k_plus_plus_n500_g0.3',
                         help='Filename suffix matching run_simulation output')
-    parser.add_argument('--corr-probe', type=str, default='platt',
-                        help='Correctness probe to use (default: platt)')
+    parser.add_argument('--corr-predictor', type=str, default='platt',
+                        help='Correctness predictor to use (default: platt)')
     args = parser.parse_args()
 
     csv_path = RESULTS_DIR / f'simulation_results_{args.suffix}.csv'
@@ -170,7 +170,7 @@ def main():
         return
 
     results_df = pd.read_csv(csv_path)
-    plot_calibration(results_df, args.corr_probe, args.suffix)
+    plot_calibration(results_df, args.corr_predictor, args.suffix)
 
 
 if __name__ == '__main__':

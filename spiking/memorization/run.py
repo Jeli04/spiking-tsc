@@ -1,7 +1,7 @@
-"""Generate memorization probe d_hat predictions for all benchmarks.
+"""Generate memorization predictor d_hat predictions for all benchmarks.
 
-Fits MIA probes (Platt-scaled), hidden state probes, and residual stream
-probes (logistic regression) on the calibration split, predicts d_hat
+Fits MIA predictors (Platt-scaled), hidden state predictors, and residual stream
+predictors (logistic regression) on the calibration split, predicts d_hat
 (P(contaminated)) on the simulation split. Output d_hat arrays are compatible
 with sim_pool.d_hat for run_simulation.
 
@@ -20,8 +20,8 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 
 from spiking.config import ATTACKS, BENCHMARK_EXP11_MAP, DOSE_GROUPS, MODELS
-from hubble.mem_probes import MIAProbe, ResidualProbe, RESIDUAL_PROBES
-from hubble.probes import PROBES
+from hubble.mem_predictors import MIAPredictor, ResidualPredictor, RESIDUAL_PREDICTORS
+from hubble.predictors import PREDICTORS
 from hubble.simulation import ItemPool, stratified_split
 
 RESULTS_DIR = Path(__file__).parent / 'results'
@@ -180,7 +180,7 @@ def main():
             scores_matrix, attack_names = load_mia_scores(
                 mapping['exp11_benchmark'], model, mapping['exp11_format'])
             if len(scores_matrix) == 0:
-                print('  MIA scores not available, skipping MIA probes')
+                print('  MIA scores not available, skipping MIA predictors')
                 has_mia = False
             else:
                 assert len(scores_matrix) == pool.n_items, (
@@ -192,12 +192,12 @@ def main():
 
             d_hat_dict = {}
 
-            # MIA probes.
+            # MIA predictors.
             for i, attack in enumerate(attack_names if has_mia else []):
                 scores = scores_matrix[:, i]
-                probe = MIAProbe(attack)
-                probe.fit(scores[cal_idx], labels_cal)
-                d_hat_sim = probe.predict_proba(scores[sim_idx])
+                predictor = MIAPredictor(attack)
+                predictor.fit(scores[cal_idx], labels_cal)
+                d_hat_sim = predictor.predict_proba(scores[sim_idx])
                 d_hat_dict[attack] = d_hat_sim
 
                 dose_aurocs = auroc_by_dose(d_hat_sim, sim_pool.duplicates)
@@ -220,24 +220,24 @@ def main():
                       f'high={dose_aurocs["high"]:.3f}  '
                       f'all={auroc_all:.3f}')
 
-            # Hidden-state probes.
-            for probe_name, probe_cls in PROBES.items():
-                pool_name = probe_cls.pool.__name__
+            # Hidden-state predictors.
+            for predictor_name, predictor_cls in PREDICTORS.items():
+                pool_name = predictor_cls.pool.__name__
                 try:
                     features = load_hidden_features(
                         mapping['exp11_benchmark'], model,
                         pool_name, mapping['exp11_format'])
                 except FileNotFoundError:
-                    print(f'  {probe_name:<20s}  SKIPPED (no cached features)')
+                    print(f'  {predictor_name:<20s}  SKIPPED (no cached features)')
                     continue
 
                 assert len(features) == pool.n_items, (
                     f'Row mismatch: {len(features)} features vs {pool.n_items} items')
 
-                probe = probe_cls()
-                probe.fit(features[cal_idx], labels_cal)
-                d_hat_sim = probe.predict_proba(features[sim_idx])
-                d_hat_dict[probe_name] = d_hat_sim
+                predictor = predictor_cls()
+                predictor.fit(features[cal_idx], labels_cal)
+                d_hat_sim = predictor.predict_proba(features[sim_idx])
+                d_hat_dict[predictor_name] = d_hat_sim
 
                 dose_aurocs = auroc_by_dose(d_hat_sim, sim_pool.duplicates)
                 try:
@@ -246,36 +246,36 @@ def main():
                     auroc_all = float('nan')
 
                 quality_rows.append({
-                    'benchmark': benchmark, 'model': model, 'attack': probe_name,
+                    'benchmark': benchmark, 'model': model, 'attack': predictor_name,
                     'auroc_low': dose_aurocs['low'],
                     'auroc_mid': dose_aurocs['mid'],
                     'auroc_high': dose_aurocs['high'],
                     'auroc_all': auroc_all,
                     'n_cal': len(cal_idx), 'n_sim': len(sim_idx),
                 })
-                print(f'  {probe_name:<20s}  '
+                print(f'  {predictor_name:<20s}  '
                       f'low={dose_aurocs["low"]:.3f}  '
                       f'mid={dose_aurocs["mid"]:.3f}  '
                       f'high={dose_aurocs["high"]:.3f}  '
                       f'all={auroc_all:.3f}')
 
-            # Residual-stream probes.
-            for probe_name, (layer, pool_name) in RESIDUAL_PROBES.items():
+            # Residual-stream predictors.
+            for predictor_name, (layer, pool_name) in RESIDUAL_PREDICTORS.items():
                 try:
                     features = load_residual_features(
                         mapping['exp11_benchmark'], layer,
                         pool_name, mapping['exp11_format'])
                 except FileNotFoundError:
-                    print(f'  {probe_name:<20s}  SKIPPED (no cached features)')
+                    print(f'  {predictor_name:<20s}  SKIPPED (no cached features)')
                     continue
 
                 assert len(features) == pool.n_items, (
                     f'Row mismatch: {len(features)} features vs {pool.n_items} items')
 
-                probe = ResidualProbe(layer=layer, pool_name=pool_name)
-                probe.fit(features[cal_idx], labels_cal)
-                d_hat_sim = probe.predict_proba(features[sim_idx])
-                d_hat_dict[probe_name] = d_hat_sim
+                predictor = ResidualPredictor(layer=layer, pool_name=pool_name)
+                predictor.fit(features[cal_idx], labels_cal)
+                d_hat_sim = predictor.predict_proba(features[sim_idx])
+                d_hat_dict[predictor_name] = d_hat_sim
 
                 dose_aurocs = auroc_by_dose(d_hat_sim, sim_pool.duplicates)
                 try:
@@ -284,14 +284,14 @@ def main():
                     auroc_all = float('nan')
 
                 quality_rows.append({
-                    'benchmark': benchmark, 'model': model, 'attack': probe_name,
+                    'benchmark': benchmark, 'model': model, 'attack': predictor_name,
                     'auroc_low': dose_aurocs['low'],
                     'auroc_mid': dose_aurocs['mid'],
                     'auroc_high': dose_aurocs['high'],
                     'auroc_all': auroc_all,
                     'n_cal': len(cal_idx), 'n_sim': len(sim_idx),
                 })
-                print(f'  {probe_name:<20s}  '
+                print(f'  {predictor_name:<20s}  '
                       f'low={dose_aurocs["low"]:.3f}  '
                       f'mid={dose_aurocs["mid"]:.3f}  '
                       f'high={dose_aurocs["high"]:.3f}  '
@@ -304,8 +304,8 @@ def main():
 
     # Merge with existing results for benchmarks not re-run.
     new_df = pd.DataFrame(quality_rows)
-    csv_path = RESULTS_DIR / 'probe_quality.csv'
-    parquet_path = RESULTS_DIR / 'probe_quality.parquet'
+    csv_path = RESULTS_DIR / 'predictor_quality.csv'
+    parquet_path = RESULTS_DIR / 'predictor_quality.parquet'
 
     if parquet_path.exists():
         existing_df = pd.read_parquet(parquet_path)

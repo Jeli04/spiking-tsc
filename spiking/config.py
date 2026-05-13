@@ -10,7 +10,7 @@ from hubble.benchmarks import (
 
 
 PAPER_SRC_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = PAPER_SRC_DIR.parent.parent
+PROJECT_ROOT = PAPER_SRC_DIR.parent
 PAPER_RESULTS_DIR = PAPER_SRC_DIR / 'results'
 
 
@@ -69,11 +69,11 @@ SAMPLE_EFF_COLORS = {
     'clean_only': '#f4a3a3',
 }
 
-# Memorization probes
+# Memorization predictors
 
 ATTACKS = ['loss', 'zlib', 'min_k', 'min_k_plus_plus', 'reference']
-HS_PROBES = []  # optional hidden-state probes
-MEM_PROBES = ATTACKS + HS_PROBES
+HS_PREDICTORS = []  # optional hidden-state predictors
+MEM_PREDICTORS = ATTACKS + HS_PREDICTORS
 
 MEM_LABELS = {
     'loss':                          'LOSS',
@@ -86,7 +86,7 @@ MEM_LABELS = {
 }
 MEM_LABELS_TEX = {k: v.replace('%', r'\%') for k, v in MEM_LABELS.items()}
 
-# Correctness probes
+# Correctness predictors
 
 CORR_LABELS = {
     'platt':         'Llama Platt',
@@ -100,19 +100,19 @@ CORR_LABELS = {
     'isotonic':      'Isotonic',
 }
 
-CORR_PROBES_DEFAULT = ['platt', 'roberta']
-CORR_PROBES_FULL = [
+CORR_PREDICTORS_DEFAULT = ['platt', 'roberta']
+CORR_PREDICTORS_FULL = [
     'uncalibrated', 'llm_platt', 'isotonic', 'roberta', 'pythia_platt',
 ]
 
-# External LLM backends shared by confidence extraction and correctness probes.
+# External LLM backends shared by confidence extraction and correctness predictors.
 
 EXTERNAL_MODELS = {
     'llama': {
         'sizes': ['8b'],
         'default_size': '8b',
         'model_id': lambda s: 'meta-llama/Llama-3.1-8B',
-        'probe_name': 'llm_platt',
+        'predictor_name': 'llm_platt',
         'c_hat_prefix': 'llama',
         'quality_suffix': '',
         'size_in_quality': False,
@@ -121,7 +121,7 @@ EXTERNAL_MODELS = {
         'sizes': ['1.4b', '2.8b', '6.9b', '12b'],
         'default_size': '1.4b',
         'model_id': lambda s: f'EleutherAI/pythia-{s}',
-        'probe_name': 'pythia_platt',
+        'predictor_name': 'pythia_platt',
         'c_hat_prefix': 'pythia',
         'quality_suffix': 'pythia',
         'size_in_quality': True,
@@ -130,7 +130,7 @@ EXTERNAL_MODELS = {
         'sizes': ['8b'],
         'default_size': '8b',
         'model_id': lambda s: f'Qwen/Qwen3-{s.upper()}',
-        'probe_name': 'qwen_platt',
+        'predictor_name': 'qwen_platt',
         'c_hat_prefix': 'qwen',
         'quality_suffix': 'qwen',
         'size_in_quality': True,
@@ -156,13 +156,13 @@ __all__ = [
     'DOSE_LABELS',
     'SAMPLE_EFF_COLORS',
     'ATTACKS',
-    'HS_PROBES',
-    'MEM_PROBES',
+    'HS_PREDICTORS',
+    'MEM_PREDICTORS',
     'MEM_LABELS',
     'MEM_LABELS_TEX',
     'CORR_LABELS',
-    'CORR_PROBES_DEFAULT',
-    'CORR_PROBES_FULL',
+    'CORR_PREDICTORS_DEFAULT',
+    'CORR_PREDICTORS_FULL',
     'EXTERNAL_MODELS',
     'PYTHIA_SIZES',
 ]

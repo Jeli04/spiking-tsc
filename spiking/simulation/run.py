@@ -1,13 +1,13 @@
 """Simulation framework evaluation (Hubble controlled contamination).
 
-Sweep memorization probe AUROC x correctness probe imputation bias under
+Sweep memorization predictor AUROC x correctness predictor imputation bias under
 random and correlated contamination at fixed gamma=0.3.
 
-The correctness probe is parameterized by imputation bias (not MAE), since
+The correctness predictor is parameterized by imputation bias (not MAE), since
 bias is what matters for the imputation estimator. The key conversion is:
     bias = (1 - d) * |base_rate - p_test|
     d    = 1 - bias / |base_rate - p_test|
-where d is the probe informativeness and p_test is the expected clean accuracy
+where d is the predictor informativeness and p_test is the expected clean accuracy
 on test sets for a given sampling regime. Since p_test differs across regimes,
 the same bias value maps to different d values per panel.
 
@@ -23,8 +23,8 @@ from hubble.simulation import (
     ESTIMATORS,
     ItemPool,
     SamplerConfig,
-    make_synthetic_correctness_probe,
-    make_synthetic_memorization_probe,
+    make_synthetic_correctness_predictor,
+    make_synthetic_memorization_predictor,
     run_simulation,
     stratified_split,
     summarize_results,
@@ -80,7 +80,7 @@ def estimate_p_test(pool: ItemPool, gamma: float, dose_group: str,
 
 
 def bias_to_d(bias: float, base_rate: float, p_test: float) -> float:
-    """Convert imputation bias to probe informativeness d.
+    """Convert imputation bias to predictor informativeness d.
 
     bias = (1 - d) * |base_rate - p_test|  =>  d = 1 - bias / |base_rate - p_test|
     """
@@ -92,7 +92,7 @@ def bias_to_d(bias: float, base_rate: float, p_test: float) -> float:
 
 # Sweep
 
-def sweep_probe_accuracy(
+def sweep_predictor_accuracy(
     pool: ItemPool,
     alphas_m: np.ndarray,
     biases_c: np.ndarray,
@@ -116,14 +116,14 @@ def sweep_probe_accuracy(
         if i % 20 == 0 or i == total:
             print(f"  {i}/{total} (αm={alpha_m:.2f}, bias={bias_c:.3f})")
 
-        # Convert bias to probe informativeness for this panel.
+        # Convert bias to predictor informativeness for this panel.
         d_c = bias_to_d(bias_c, base_rate, p_test)
 
         rng = np.random.default_rng(seed)
         true_contam = (pool.duplicates > 0).astype(int)
-        pool.d_hat = make_synthetic_memorization_probe(
+        pool.d_hat = make_synthetic_memorization_predictor(
             true_contam, alpha_m, rng)
-        pool.c_hat = make_synthetic_correctness_probe(
+        pool.c_hat = make_synthetic_correctness_predictor(
             pool.y_clean, d_c, rng, base_rate=base_rate)
 
         cfg = SamplerConfig(
@@ -248,7 +248,7 @@ def main():
     parser.add_argument("--n-replicates", type=int, default=1000)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--alpha-steps", type=int, default=11,
-                        help="Number of grid points for each probe axis")
+                        help="Number of grid points for each predictor axis")
     parser.add_argument("--difficulty-bins", nargs="+", type=str,
                         default=["easy", "medium", "hard"],
                         help="Difficulty bins for correlated regime")
@@ -324,13 +324,13 @@ def main():
     # Row 1: random regime by dose.
     random_results = {}
     for dg in ["low", "mid", "high"]:
-        path = results_dir / f"probe_sweep_random_{dg}.parquet"
+        path = results_dir / f"predictor_sweep_random_{dg}.parquet"
         if args.plot_only:
             random_results[dg] = pd.read_parquet(path)
         else:
             pt = p_tests[f"random_{dg}"]
             print(f"\n=== Random, dose={dg}, p_test={pt:.3f} ===")
-            random_results[dg] = sweep_probe_accuracy(
+            random_results[dg] = sweep_predictor_accuracy(
                 pool, alphas_m, biases_random, pt,
                 args.gamma, args.n, args.n_replicates, args.seed,
                 base_rate=base_rate, dose_group=dg, regime="random",
@@ -340,18 +340,18 @@ def main():
     # Row 2: correlated regime by difficulty bin.
     correlated_results = {}
     has_correlated = (
-        results_dir / f"probe_sweep_correlated_{args.difficulty_bins[0]}.parquet").exists()
+        results_dir / f"predictor_sweep_correlated_{args.difficulty_bins[0]}.parquet").exists()
     if args.plot_only and not has_correlated:
         print("No correlated results found — plotting random only")
     else:
         for db in args.difficulty_bins:
-            path = results_dir / f"probe_sweep_correlated_{db}.parquet"
+            path = results_dir / f"predictor_sweep_correlated_{db}.parquet"
             if args.plot_only:
                 correlated_results[db] = pd.read_parquet(path)
             elif has_confidence:
                 pt = p_tests[f"correlated_{db}"]
                 print(f"\n=== Correlated, bin={db}, p_test={pt:.3f} ===")
-                correlated_results[db] = sweep_probe_accuracy(
+                correlated_results[db] = sweep_predictor_accuracy(
                     pool, alphas_m, biases_correlated, pt,
                     args.gamma, args.n, args.n_replicates, args.seed,
                     base_rate=base_rate, dose_group="high",
